@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 from typing import (
+    Any,
+    Collection,
     Dict,
+    List,
     Optional,
+    Type,
+    TypeVar,
+    Union,
 )
 
 import logging
@@ -19,7 +25,92 @@ from dbot.common import (
 )
 
 
+#
+# First, some helper functions for typing socket messages
+#
+
+
+T = TypeVar('T')
+
+
+def assert_type(o: Any, t: Type[T]) -> T:
+    assert isinstance(o, t)
+    return o
+
+
+def try_type(o: Any, t: Type[T]) -> Optional[T]:
+    if isinstance(o, t):
+        return o
+    return None
+
+
+def expect_int(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+) -> int:
+    if isinstance(d, dict):
+        assert isinstance(k, str)
+        return assert_type(d[k], int)
+    elif isinstance(d, list) or isinstance(d, tuple):
+        assert isinstance(k, int)
+        return assert_type(d[k], int)
+    raise ValueError(f'unsupported data type: {type(d)}')
+
+
+def expect_str(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+) -> str:
+    if isinstance(d, dict):
+        assert isinstance(k, str)
+        return assert_type(d[k], str)
+    elif isinstance(d, list) or isinstance(d, tuple):
+        assert isinstance(k, int)
+        return assert_type(d[k], str)
+    raise ValueError(f'unsupported data type: {type(d)}')
+
+
+def expect_list(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+) -> list:
+    if isinstance(d, dict):
+        assert isinstance(k, str)
+        return assert_type(d[k], list)
+    elif isinstance(d, list) or isinstance(d, tuple):
+        assert isinstance(k, int)
+        return assert_type(d[k], list)
+    raise ValueError(f'unsupported data type: {type(d)}')
+
+
+def expect_bool(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+) -> bool:
+    if isinstance(d, dict):
+        assert isinstance(k, str)
+        return assert_type(d[k], bool)
+    elif isinstance(d, list) or isinstance(d, tuple):
+        assert isinstance(k, int)
+        return assert_type(d[k], bool)
+    raise ValueError(f'unsupported data type: {type(d)}')
+
+
+def require_args(d: Union[List, Dict], l: int) -> None:
+    if len(d) < l:
+        raise ValueError('not enough data')
+
+
 class GlobalNamespace(socketio.ClientNamespace):
+    """ A ClientNamespace for handling all websocket messages.
+
+        `trigger_event` is overriding socketio.ClientNamespace to provide
+        handler lookup and logging unhandled events and exceptions.
+
+        Each message type filters into an `on_*` handler method, which is
+        responsible for creating an events.GameEvent object from the message
+        and placing it into the event queue (to be processed by DBot).
+    """
 
     def __init__(
         self,
@@ -31,188 +122,38 @@ class GlobalNamespace(socketio.ClientNamespace):
         self.event_queue = event_queue
 
     def trigger_event(self, event, *args):
+        """ overrididing ClientNamespace """
         handler_name = f'on_{event}'
-        if hasattr(self, handler_name):
-            try:
-                getattr(self, handler_name)(*args)
-            except Exception as e:
-                logging.error('\n'.join([
-                    '\n\n--- exception during event handling ---',
-                    f'    event: {event}',
-                    '     data ',
-                    pprint.pformat(args),
-                    '     exception ',
-                    traceback.format_exc(),
-                    '---\n\n',
-                ]))
+        if not hasattr(self, handler_name):
+            logging.info(f'not handled: {event} ({data})')
             return
 
-        self.catch_all(event, *args)
+        handler = getattr(self, handler_name)
 
-    def catch_all(self, event, data=None):
-        logging.info(f'not handled: {event} ({data})')
+        try:
+            handler(*args)
+        except Exception as e:
+            logging.error('\n'.join([
+                f'\n\n--- exception handling {event} ---',
+                pprint.pformat(args),
+                ' - - - - - - - - - - - - - - - - -',
+                traceback.format_exc(),
+                '----------------------------------\n\n',
+            ]))
 
-    def on_connect(self):
-        self.event_queue.put(events.Connected())
+    #
+    # helper methods
+    #
 
-    def on_signedIn(self, data):
-        if len(data) < 1:
-            logging.warning('missing uuid from signedIn')
-            uuid = ''
-        else:
-            uuid = data[0]
-        self.event_queue.put(events.SignedIn(uuid))
-
-    def on_startCharacterSelect(self, data):
-        self.event_queue.put(events.StartCharacterSelect())
-
-    def on_playerSignedIn(self, data):
-        player = self.load_player_data_from(data)
-        if player is None:
-            logging.warning('login with invalid player data')
-            return
-        self.event_queue.put(events.PlayerSignedIn(player))
-
-    def on_playerPreviouslySignedIn(self, data):
-        if len(data) < 1:
-            logging.warning('missing data from playerPreviouslySignedIn')
-            return
-
-        players = list(filter(
-            lambda p: p is not None,
-            map(self.load_player_data_from, data)
-        ))
-        self.event_queue.put(events.PlayerPreviouslySignedIn(players))
-
-    def on_joinMap(self, data):
-        if len(data) < 1:
-            logging.warning('missing map name in joinMap')
-            return
-
-        map_name = data[0]
-        self.event_queue.put(events.JoinMap(map_name))
-
-    def on_selectPlayer(self, data):
-        if len(data) < 1:
-            logging.warning('missing player in selectPlayer')
-            return
-        username = data
-        self.event_queue.put(events.SelectPlayer(username))
-
-    def on_invitePlayer(self, data):
-        if len(data) < 1:
-            logging.warning('missing player in invitePlayer')
-            return
-        username = data
-        self.event_queue.put(events.InvitePlayer(username))
-
-    def on_party(self, data):
-        party = data['party']
-        pid = data['partyID']
-        self.event_queue.put(events.Party(
-            party,
-            pid,
-        ))
-
-    def on_playerUpdate(self, data):
-        key = data['key']
-        value = data['value']
-        username = data['username']
-        self.event_queue.put(events.PlayerUpdate(
-            username,
-            key,
-            value,
-        ))
-
-    def on_movePlayer(self, data):
-        direction = Direction(data['direction'])
-        username = data['username']
-        assert isinstance(username, str)
-        self.event_queue.put(events.MovePlayer(
-            direction,
-            username,
-        ))
-
-    def on_bonk(self, data):
-        self.event_queue.put(events.Bonk())
-
-    def on_update(self, data):
-        key = data['key']
-        value = data['value']
-        self.event_queue.put(events.Update(
-            key,
-            value,
-        ))
-
-    def on_npcUpdate(self, data):
-        # TODO
-        ...
-
-    def on_message(self, data):
-        channel = data['channel']
-        assert isinstance(channel, str), channel
-
-        cierra = data['cierra'] or False
-        assert isinstance(cierra, bool)
-
-        contents = data['contents']
-        assert isinstance(contents, str)
-
-        mid = data['id']
-        assert isinstance(mid, int)
-
-        months = data['monthsSubscribed'] or 0
-        assert isinstance(months, int)
-
-        permissions = data['permissions']
-        assert isinstance(permissions, int)
-
-        subscriber = data['subscriber']
-        assert isinstance(subscriber, bool)
-
-        username = data['username']
-        assert isinstance(username, str)
-
-        warning = data['warning']
-        assert isinstance(warning, bool)
-
-        self.event_queue.put(events.Message(
-            channel,
-            cierra,
-            contents,
-            mid,
-            months,
-            permissions,
-            subscriber,
-            username,
-            warning,
-        ))
-
-    def on_disconnect(self):
-        logging.info('disconnected')
-
-    def load_player_data_from(
+    def load_player(
         self,
         data: Dict[str, object],
-    ) -> Optional[PlayerData]:
-        cierra = data.get('cierra') or False
-        assert isinstance(cierra, bool), cierra
-
-        months = data.get('monthsSubscribed') or 0
-        assert isinstance(months, int), months
-
-        permissions = data.get('permissions') or 0
-        assert isinstance(permissions, int), permissions
-
-        subscriber = data.get('subscriber') or False
-        assert isinstance(subscriber, bool), subscriber
-
-        username = data.get('username')
-        if username is None:
-            logging.warning('missing username for player data')
-            return None
-        assert isinstance(username, str), username
-
+    ) -> PlayerData:
+        months = try_type(data['monthsSubscribed'], int) or 0
+        permissions = expect_int(data, 'permissions')
+        subscriber = expect_bool(data, 'subscriber')
+        username = expect_str(data, 'username')
+        cierra = expect_bool(data, 'cierra')
         return PlayerData(
             cierra,
             months,
@@ -221,8 +162,191 @@ class GlobalNamespace(socketio.ClientNamespace):
             username,
         )
 
+    #
+    # message handling
+    #   These map 1:1 with GameEvent classes, except for on_disconnect. Message
+    #   types are documented in events.py.
+    #
+
+    #
+    # general
+    #
+
+    def on_connect(self):
+        self.event_queue.put(
+            events.Connected()
+        )
+
+    def on_disconnect(self):
+        logging.info('disconnected')
+
+    def on_signedIn(self, data):
+        require_args(data, 1)
+        uuid = expect_string(data, 0)
+        self.event_queue.put(
+            events.SignedIn(uuid)
+        )
+
+    def on_playerSignedIn(self, data):
+        player = self.load_player(data)
+        self.event_queue.put(
+            events.PlayerSignedIn(player)
+        )
+
+    def on_playerPreviouslySignedIn(self, data):
+        players = list(map(self.load_player, data))
+        self.event_queue.put(
+            events.PlayerPreviouslySignedIn(players)
+        )
+
+    def on_startCharacterSelect(self, data):
+        self.event_queue.put(
+            events.StartCharacterSelect()
+        )
+
+    def on_update(self, data):
+        key = expect_str(data, 'key')
+        value = data['value']
+        self.event_queue.put(
+            events.Update(
+                key,
+                value,
+            )
+        )
+
+    #
+    # movement
+    #
+
+    def on_movePlayer(self, data):
+        direction = Direction(expect_str(data, 'direction'))
+        username = expect_str(data, 'username')
+        self.event_queue.put(
+            events.MovePlayer(
+                direction,
+                username,
+            )
+        )
+
+    def on_bonk(self, data):
+        self.event_queue.put(events.Bonk())
+
+    def on_transport(self, data):
+        x = expect_float(data, 'x')
+        y = expect_float(data, 'y')
+        self.event_queue.put(
+            events.Transport(x, y)
+        )
+
+    def on_joinMap(self, data):
+        require_args(data, 1)
+        map_name = expect_str(data, 1)
+        self.event_queue.put(
+            events.JoinMap(map_name)
+        )
+
+    # TODO: leave map
+    # def on_leaveMap(self, data):
+    # def on_playerLeftMap(self, data):
+
+    #
+    # players
+    #
+
+    def on_playerUpdate(self, data):
+        username = expect_str(data, 'username')
+        key = expect_str(data, 'key')
+        value = data['value']
+        self.event_queue.put(
+            events.PlayerUpdate(
+                username,
+                key,
+                value,
+            )
+        )
+
+    def on_selectPlayer(self, data):
+        require_args(data, 1)
+        username = assert_type(data, str)
+        self.event_queue.put(
+            events.SelectPlayer(username)
+        )
+
+    #
+    # parties
+    #
+
+    def on_invitePlayer(self, data):
+        require_args(data, 1)
+        username = assert_type(data, str)
+        self.event_queue.put(
+            events.InvitePlayer(username)
+        )
+
+    def on_party(self, data):
+        party = expect_list(data, 'party')
+        pid = expect_int(data, 'partyID')
+        self.event_queue.put(
+            events.Party(
+                party,
+                pid,
+            )
+        )
+
+    #
+    # battles
+    #
+
+    # TODO: battle
+    # def on_challengePlayer(self, data):
+
+    #
+    # trades
+    #
+
+    # TODO: trade
+    # def on_requestPlayer(self, data):
+    # def on_startTrade(self, data):
+    # def on_leaveTrade(self, data):
+
+    #
+    # chat
+    #
+
+    def on_message(self, data):
+        months = try_type(data['monthsSubcribed'], int) or 0
+        permissions = expect_int(data, 'permissions')
+        subcriber = expect_bool(data, 'subscriber')
+        username = expect_str(data, 'username')
+        contents = expect_str(data, 'contents')
+        warning = expect_bool(data, 'warning')
+        channel = expect_str(data, 'channel')
+        cierra = expect_bool(data, 'cierra')
+        mid = expect_int(data, 'id')
+        self.event_queue.put(
+            events.Message(
+                channel,
+                cierra,
+                contents,
+                mid,
+                months,
+                permissions,
+                subscriber,
+                username,
+                warning,
+            )
+        )
+
+    #
+    # NPCs
+    #
+
+    # TODO: NPC
+    # def on_npcUpdate(self, data):
+
 
 class RetroSocket:
+    """ websocket wrapper for retrommo """
 
     def __init__(
         self,
@@ -233,27 +357,11 @@ class RetroSocket:
         self.host = host
         self.port = port
 
-        self.socket = socketio.Client()
         self.event_queue: queue.Queue = queue.Queue()
+        self.socket = socketio.Client()
         self.socket.register_namespace(
             GlobalNamespace(self.event_queue, '/')
         )
-
-        # self.socket.on_event('signedIn', self.on_signedIn)
-        # self.socket.on_event('playerSignedIn', self.on_playerSignedIn)
-        # self.socket.on_event('playerPreviouslySignedIn', self.on_playerPreviouslySignedIn)
-        # self.socket.on_event('selectableCharacters', self.on_selectableCharacters)
-        # self.socket.on_event('totalCharacters', self.on_totalCharacters)
-        # self.socket.on_event('characterSelectHasPagination', self.on_characterSelectHasPagination)
-        # self.socket.on_event('joinMap', self.on_joinMap)
-        # self.socket.on_event('playerUpdate', self.on_playerUpdate)
-        # self.socket.on_event('movePlayer', self.on_movePlayer)
-        # self.socket.on_event('signedIn', self.on_signedIn)
-        # self.socket.on_event('signedIn', self.on_signedIn)
-        # self.socket.on_event('signedIn', self.on_signedIn)
-        # self.socket.on_event('signedIn', self.on_signedIn)
-        # self.socket.on_event('signedIn', self.on_signedIn)
-        # self.socket.on_event('signedIn', self.on_signedIn)
 
     def __enter__(self) -> RetroSocket:
         self.connect()
@@ -275,7 +383,7 @@ class RetroSocket:
             self.connected = False
 
     #
-    #
+    # send wrappers
     #
 
     def send_message(
@@ -283,6 +391,7 @@ class RetroSocket:
         channel: str,
         contents: str,
     ) -> None:
+        """ send a chat message """
         self.socket.emit('message', {
             'channel': channel,
             'contents': contents,
@@ -293,6 +402,7 @@ class RetroSocket:
         x: float,
         y: float,
     ) -> None:
+        """ send a click at x,y coords """
         self.socket.emit('click', {
             'down': {
                 'x': x,
@@ -308,6 +418,7 @@ class RetroSocket:
         self,
         key: str,
     ) -> None:
+        """ send keyup (released) message """
         self.socket.emit('keyup', key)
         logging.debug(f'keyup: {key}')
 
@@ -315,13 +426,11 @@ class RetroSocket:
         self,
         key: str,
     ) -> None:
+        """ send a keydown (pressed) message """
         self.socket.emit('keydown', key)
         logging.debug(f'keydown: {key}')
 
     def send_logout(self) -> None:
+        """ logout from retrommo """
         logging.info('logging out')
         self.socket.emit('logOut')
-
-if __name__ == '__main__':
-    with RetroSocket() as s:
-        time.sleep(5)
