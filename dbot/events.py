@@ -19,6 +19,38 @@ class GameEvent:
         self.event_name = name
 
 
+class ChallengePlayer(GameEvent):
+    # TODO
+
+    def __init__(self) -> None:
+        super().__init__('challengePlayer')
+
+
+class RequestPlayer(GameEvent):
+    # TODO
+
+    def __init__(self) -> None:
+        super().__init__('requestPlayer')
+
+
+class CloseBank(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('closeBank')
+
+
+class StartTrade(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('startTrade')
+
+
+class LeaveTrade(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('leaveTrade')
+
+
 class Connected(GameEvent):
 
     def __init__(self) -> None:

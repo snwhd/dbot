@@ -27,6 +27,7 @@ from dbot.common import (
     PlayerData,
     UIPositions,
 )
+from dbot.uistate import UIState
 
 
 class BotAction(enum.Enum):
@@ -89,6 +90,8 @@ class DBot:
         self.password = password
         self.friends = friends
         self.admins = admins
+
+        self.ui = UIState()
         self.max_errors = 0
 
         self.logging_out = False
