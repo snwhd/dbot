@@ -5,6 +5,7 @@ from typing import (
 )
 
 from .common import (
+    Direction,
     PlayerData,
 )
 
@@ -18,6 +19,12 @@ class GameEvent:
         self.event_name = name
 
 
+class Connected(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('connected')
+
+
 class SignedIn(GameEvent):
 
     def __init__(
@@ -26,6 +33,12 @@ class SignedIn(GameEvent):
     ) -> None:
         super().__init__('signedIn')
         self.uuid = uuid
+
+
+class StartCharacterSelect(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('startCharacterSelect')
 
 
 class PlayerSignedIn(GameEvent):
@@ -44,7 +57,7 @@ class PlayerPreviouslySignedIn(GameEvent):
         self,
         players: List[PlayerData],
     ) -> None:
-        super.__init__('playerPreviouslySignedIn')
+        super().__init__('playerPreviouslySignedIn')
         self.players = players
 
 
@@ -59,9 +72,9 @@ class JoinMap(GameEvent):
         self,
         name: str,
     ) -> None:
-        super.__init__('joinMap')
+        super().__init__('joinMap')
         self.map_name = name
-    
+
 
 class PlayerUpdate(GameEvent):
 
@@ -99,7 +112,9 @@ class Update(GameEvent):
 
 
 class OpenBank(GameEvent):
-    ...
+
+    def __init__(self) -> None:
+        super().__init__('openBank')
 
 
 class Transport(GameEvent):
@@ -125,7 +140,10 @@ class PlayerLeftMap(GameEvent):
 
 
 class LeaveMap(GameEvent):
-    ...
+
+    def __init__(self) -> None:
+        super().__init__('leaveMap')
+
 
 
 class Message(GameEvent):
@@ -142,6 +160,7 @@ class Message(GameEvent):
         username: str,
         warning: bool,
     ) -> None:
+        super().__init__('message')
         self.channel = channel
         self.cierra = cierra
         self.contents = contents

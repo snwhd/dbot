@@ -1,6 +1,15 @@
 from typing import (
     Optional,
 )
+import enum
+
+
+class Direction(enum.Enum):
+
+    up = 'up'
+    down = 'down'
+    left = 'left'
+    right = 'right'
 
 
 class PlayerData:
