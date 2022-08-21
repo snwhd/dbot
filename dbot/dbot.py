@@ -21,61 +21,24 @@ import traceback
 
 import dbot.events as events
 
-from dbot.retrosocket import RetroSocket
+from dbot.action import (
+    BotAction,
+    ActionState,
+    GrindTarget,
+)
 from dbot.common import (
     Direction,
     PlayerData,
     UIPositions,
 )
+from dbot.chat_commands import (
+    CommandHandler,
+)
 from dbot.uistate import UIState
-
-
-class BotAction(enum.Enum):
-
-    none = 'none'
-    party_up = 'party up'
-    grind = 'grind'
-
-
-class ActionState(enum.Enum):
-
-    none = 'none'
-
-    # party up
-    waiting_for_players = 'waiting for players'
-    selecting_player = 'selecting player'
-    inviting_player = 'inviting player'
-    moving_to_leader = 'moving to leader'
-    awaiting_invite = 'awaiting invite'
-    accepted_party = 'accepted party'
-    joined_party = 'joined party'
-
-
-class GrindTarget(enum.Enum):
-
-    none = 'none'
-    field1 = 'field1'
-    field2 = 'field2'
-    cave1 = 'cave1'
-    cave2 = 'cave2'
-    gobble = 'gobble'
-    bday_cave = 'bday cave'
-    bday_rush = 'bday rush'
-
-
-# TODO: split DBot stuff out into separate classes for action /
-#       battle / command state.
+from dbot.retrosocket import RetroSocket
 
 
 class DBot:
-
-    hello_messages = [
-        'hey :)',
-        'hello!',
-        '\\o',
-        'greetings',
-        'howdy!',
-    ]
 
     def __init__(
         self,
@@ -92,10 +55,11 @@ class DBot:
         self.admins = admins
 
         self.ui = UIState()
+        self.command_handler = CommandHandler(self, 'dbots')
+
         self.max_errors = 0
 
         self.logging_out = False
-        self.logged_out = False
 
         self._socket: Optional[RetroSocket] = None
 
@@ -126,41 +90,6 @@ class DBot:
         }
         self.bonked = [False, False]
         self.move_ready = True
-
-        self.commands = {
-            'debug': {
-                'handler': self.command_debug,
-                'admin': True,
-            },
-            'say': {
-                'handler': self.command_say,
-                'admin': False,
-            },
-            'where': {
-                'handler': self.command_where,
-                'admin': True,
-            },
-            'goto': {
-                'handler': self.command_goto,
-                'admin': True,
-            },
-            'grind': {
-                'handler': self.command_grind,
-                'admin': True,
-            },
-            'party': {
-                'handler': self.command_party,
-                'admin': True,
-            },
-            'logout': {
-                'handler': self.command_logout,
-                'admin': True,
-            },
-            'reset': {
-                'handler': self.command_reset,
-                'admin': True,
-            },
-        }
 
     @property
     def socket(self) -> RetroSocket:
@@ -462,7 +391,6 @@ class DBot:
             self.move_right(False)
         else:
             logging.info('bonk when not moving!?')
-        # stop_moving()
 
     def handle_update(
         self,
@@ -474,43 +402,14 @@ class DBot:
             self.party_request_from = str(e.value)
             self.party_request_open = True
 
-    def handle_openBank(
-        self,
-        e: events.OpenBank,
-    ) -> None:
-        ...
-
-    def handle_transport(
-        self,
-        e: events.Transport,
-    ) -> None:
-        ...
-
-    def handle_playerLeftMap(
-        self,
-        e: events.PlayerLeftMap,
-    ) -> None:
-        ...
-
-    def handle_leaveMap(
-        self,
-        e: events.LeaveMap,
-    ) -> None:
-        if self.logging_out:
-            self.logged_out = True
-
     def handle_message(
         self,
         e: events.Message,
     ) -> None:
-        print(f'handling message: {e.contents}')
-        if (
-            e.contents.startswith('dbots ') or
-            e.contents.startswith(self.name + ' ')
-        ):
-            self.do_command(e.contents, e.username, e.channel)
-        else:
-            logging.debug(f'message skipped: {e.contents}')
+        try:
+            self.command_handler.handle(e)
+        except Exception as e:
+            logging.warning(f'exception parsing command: {e}')
 
     def handle_selectPlayer(
         self,
@@ -518,12 +417,6 @@ class DBot:
     ) -> None:
         self.player_select_open = True
         self.player_selected = e.username
-
-    def handle_invitePlayer(
-        self,
-        e: events.InvitePlayer,
-    ) -> None:
-        ...
 
     def handle_party(
         self,
@@ -533,179 +426,10 @@ class DBot:
         self.in_party = len(e.party) > 0
         self.current_party = e.party
 
-    def do_command(
-        self,
-        text: str,
-        source: str,
-        channel: str,
-    ) -> None:
-        parts = shlex.split(text)
-        logging.debug(f'parsed message: {parts}')
-        if len(parts) < 2:
-            return
-
-        command = parts.pop(0)
-        direct = command == self.name
-        if direct:
-            logging.debug('command is direct')
-            if len(parts) == 0:
-                return
-        else:
-            assert command == 'dbots'
-        command = parts.pop(0)
-
-        command_config = self.commands.get(command)
-        if command_config is None:
-            logging.info(f'no config for command: {command}')
-            return
-
-        from_admin = source in self.admins or source in self.friends
-        if command_config['admin'] and not from_admin:
-            logging.info(f'not handling admin command {command} from {source}')
-            if self.is_leader():
-                # TODO: return message
-                self.socket.send_message(channel, f'sorry {source}, we only obey d.')
-            return
-
-        # TODO: typing for command configs
-        command_config['handler'](command, parts, source, channel) # type: ignore
-
-    def command_debug(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        print('--- debug command ---')
-        print('#   players   #')
-        pprint.pprint(self.logged_in_players)
-        print('---------------------')
-
-    def command_say(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        if len(parts) == 1 and parts[0] == 'hi':
-            message = random.choice(self.hello_messages)
-            message.format(source)
-            self.socket.send_message(channel, message)
-
-    def command_where(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        ...
-
-    def command_grind(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        ...
-
-    def command_party(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        if len(parts) > 0 and parts[0] == 'up':
-            parts.pop(0)
-            self.target_party = self.identify_party(exclude=[source])
-        elif len(parts) > 2:
-            friends = self.logged_in_friends()
-            bots = list(filter(
-                lambda b: b != '_' and b in friends,
-                parts[:3]
-            ))
-            self.target_party = bots
-            parts = parts[3:]
-
-        logging.debug(f'party: {self.target_party}')
-
-        if len(self.target_party) == 1:
-            self.socket.send_message('wsay', "I'm solo")
-            self.current_action = BotAction.none
-            return
-
-        logging.debug('new action: party_up')
-        self.current_action = BotAction.party_up
-        leader_name = self.party_leader()
-        assert leader_name is not None
-        leader = self.logged_in_players[leader_name]
-        party_position = self.target_party.index(self.name)
-        if party_position != 0:
-            target_x = int(leader['coords']['x'])
-            target_y = int(leader['coords']['y'])
-            if party_position == 1:
-                target_x -= 1
-            if party_position == 2:
-                target_x += 1
-            self.target_position = (target_x, target_y)
-
-        # TODO: pending action
-        # if len(parts) > 0 and parts[0] == 'and':
-        #     self.do_command(
-        #         shlex.join(['dbots'] + parts),
-        #         source,
-        #         channel,
-        #     )
-
-    def command_goto(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        if len(parts) < 2:
-            return
-
-        try:
-            x = int(parts[0])
-            y = int(parts[1])
-        except ValueError as e:
-            self.socket.send_message(channel, 'I can\'t go there')
-            return
-
-        self.target_position = (x, y)
-        self.bonked = [False, False]
-
-    def command_logout(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        self.socket.send_logout()
-        self.logging_out = True
-
-    def command_reset(
-        self,
-        command: str,
-        parts: List[str],
-        source: str,
-        channel: str,
-    ) -> None:
-        self.current_action = BotAction.none
-        self.current_state = ActionState.none
-        # TODO: leave party
-
     def step(
         self,
         do_actions: bool,
-    ):
+    ) -> None:
         s = self.socket
         while not self.socket.event_queue.empty():
             event = self.socket.event_queue.get()
@@ -717,7 +441,7 @@ class DBot:
     def handle_event(
         self,
         event: events.GameEvent,
-    ):
+    ) -> None:
         handler = getattr(self, f'handle_{event.event_name}')
         if handler is not None:
             handler(event)
@@ -842,6 +566,44 @@ class DBot:
         elif self.current_state == ActionState.accepted_party:
             if self.in_party:
                 self.current_stae = ActionState.joined_party
+
+    def say(
+        self,
+        message: str,
+        channel = 'say',
+    ) -> None:
+        self.socket.send_message(channel, message)
+
+    def goto(
+        self,
+        x: int,
+        y: int,
+    ) -> None:
+        self.target_position = (x, y)
+        self.bonked = [False, False]
+
+    def logout(self) -> None:
+        self.socket.send_logout()
+        self.logging_out = True
+
+    def join_party(
+        self,
+        party: List[str],
+    ) -> None:
+        self.target_party = party
+        self.current_action = BotAction.party_up
+        leader_name = self.party_leader()
+        assert leader_name is not None
+        leader = self.logged_in_players[leader_name]
+        party_position = self.target_party.index(self.name)
+        if party_position != 0:
+            target_x = int(leader['coords']['x'])
+            target_y = int(leader['coords']['y'])
+            if party_position == 1:
+                target_x -= 1
+            if party_position == 2:
+                target_x += 1
+            self.goto(target_x, target_y)
 
     def click_at_tile(
         self,
