@@ -243,9 +243,16 @@ class GlobalNamespace(socketio.ClientNamespace):
             events.JoinMap(map_name)
         )
 
-    # TODO: leave map
-    # def on_leaveMap(self, data):
-    # def on_playerLeftMap(self, data):
+    def on_leaveMap(self, data):
+        self.event_queue.put(
+            events.LeaveMap()
+        )
+
+    def on_playerLeftMap(self, data):
+        map_name = assert_type(data, str)
+        self.event_queue.put(
+            events.PlayerLeftMap(username)
+        )
 
     #
     # players

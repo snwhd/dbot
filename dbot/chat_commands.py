@@ -62,6 +62,11 @@ class CommandHandler:
             admin_only=False,
         ))
         self.add_command(CommandConfig(
+            'where',
+            self.command_where,
+            admin_only=False,
+        ))
+        self.add_command(CommandConfig(
             'debug',
             self.command_debug,
         ))
@@ -160,6 +165,19 @@ class CommandHandler:
             return
         message = random.choice(HELLO_MESSAGES)
         self.bot.say(message, channel)
+
+    def command_where(
+        self,
+        parts: List[str],
+        source: str,
+        channel: str,
+        direct: bool,
+    ) -> None:
+        if parts == ['are', 'you']:
+            gmap = self.bot.current_map or self.bot.last_map
+            pos = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
+            message = f"I'm at {gmap} {pos}"
+            self.bot.say(message, channel)
 
     def command_debug(
         self,

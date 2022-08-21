@@ -5,6 +5,7 @@ from typing import (
     Dict,
     List,
     Optional,
+    Set,
     Tuple,
     Union,
 )
@@ -66,6 +67,10 @@ class DBot:
 
         self.current_action = BotAction.none
         self.current_state = ActionState.none
+
+        self.last_map  = ''
+        self.current_map = ''
+        self.players_in_map: Set[str] = set()
         self.logged_in_players: Dict[str, Any] = {}
 
         # state: party up
@@ -97,6 +102,10 @@ class DBot:
         if self._socket is None:
             raise RuntimeError('not connected')
         return self._socket
+
+    @property
+    def me(self) -> Dict[str, Any]:
+        return self.logged_in_players[self.name]
 
     @classmethod
     def load_from_config(
@@ -312,7 +321,22 @@ class DBot:
         self,
         e: events.JoinMap,
     ) -> None:
-        ...
+        assert self.current_map == ''
+        self.current_map = e.map_name
+
+    def handle_leaveMap(
+        self,
+        e: events.LeaveMap,
+    ) -> None:
+        self.last_map = self.current_map
+        self.current_map = ''
+
+    def handle_playerLeftMap(
+        self,
+        e: events.PlayerLeftMap,
+    ) -> None:
+        if e.username in self.players_in_map:
+            self.players_in_map.remove(e.username)
 
     def handle_playerUpdate(
         self,
@@ -321,8 +345,10 @@ class DBot:
         player = self.logged_in_players.get(e.username)
         if player is None:
             logging.warning(f'missing player moved: {e.username}')
-            return
-        player[e.key] = e.value
+        else:
+            if e.username != self.name:
+                self.players_in_map.add(e.username)
+            player[e.key] = e.value
 
     def handle_movePlayer(
         self,
