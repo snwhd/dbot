@@ -216,7 +216,7 @@ class Party(GameEvent):
         self.party = party
 
 #
-# battles
+# pvp battles
 #
 
 
@@ -226,6 +226,23 @@ class ChallengePlayer(GameEvent):
 
     def __init__(self) -> None:
         super().__init__('challengePlayer')
+
+
+#
+# monster battles
+#
+
+
+class StartBattle(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('startBattle')
+
+
+class LeaveBattle(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('leaveBattle')
 
 
 #

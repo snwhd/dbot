@@ -249,7 +249,7 @@ class GlobalNamespace(socketio.ClientNamespace):
         )
 
     def on_playerLeftMap(self, data):
-        map_name = assert_type(data, str)
+        username = assert_type(data, str)
         self.event_queue.put(
             events.PlayerLeftMap(username)
         )
@@ -299,11 +299,70 @@ class GlobalNamespace(socketio.ClientNamespace):
         )
 
     #
-    # battles
+    # pvp battles
     #
 
     # TODO: battle
     # def on_challengePlayer(self, data):
+
+    #
+    # monster battles
+    #
+
+    def on_startBattle(self, data):
+        self.event_queue.put(
+            events.StartBattle()
+        )
+
+    def on_leaveBattle(self, data):
+        self.event_queue.put(
+            events.LeaveBattle()
+        )
+
+    # TODO update(enemyMonsters=[isDead, monster])
+    # TODO playerUpdate(selectedAbility)
+    # TODO playerUpdate(selectedTarget)
+    def on_battleEvents(self, data):
+        # [
+        #     {
+        #         'ability': 'fireball',
+        #         'caster': {'group': 'team', 'index': 0, 'type': 'player'},
+        #         'casterName': 'bbot',
+        #         'endDuration': 3000,
+        #         'newMP': 16,
+        #         'startDuration': 0,
+        #         'target': {'group': 'enemies', 'index': 0, 'type': 'monster'},
+        #         'targetName': 'Spider',
+        #         'type': 'ability'
+        #     },
+        #     {
+        #         'amount': 18,
+        #         'endDuration': 3000,
+        #         'guarded': False,
+        #         'newHP': 0,
+        #         'recipient': {'group': 'enemies', 'index': 0, 'type': 'monster'},
+        #         'recipientName': 'Spider',
+        #         'startDuration': 1500,
+        #         'type': 'damage'
+        #     },
+        #     {
+        #       'endDuration': 4500,
+        #         'recipient': {'group': 'enemies', 'index': 0, 'type': 'monster'},
+        #         'recipientName': 'Spider',
+        #         'startDuration': 3000,
+        #         'type': 'death'
+        #     }
+        # ]
+        #...
+        # [
+        #  {'endDuration': 3000, 'escaped': False, 'startDuration': 0, 'type': 'victory'},
+        #  {'endDuration': 6000, 'gold': 2, 'startDuration': 3000, 'type': 'gold'},
+        #  {'endDuration': 6000,
+        #   'experience': 3,
+        #   'startDuration': 4500,
+        #   'type': 'experience'}]
+
+        ...
 
     #
     # trades

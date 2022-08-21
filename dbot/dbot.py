@@ -61,6 +61,8 @@ class DBot:
 
         self.max_errors = 0
 
+        self.state: Dict[str, Any] = {}
+
         self.logging_out = False
 
         self._socket: Optional[RetroSocket] = None
@@ -273,6 +275,7 @@ class DBot:
             self.socket.send_keyup('d')
 
     def stop_moving(self) -> None:
+        self.target_position = None
         if self.moving[Direction.up]:
             self.move_up(False)
         if self.moving[Direction.down]:
@@ -328,6 +331,9 @@ class DBot:
         self,
         e: events.LeaveMap,
     ) -> None:
+        if self.target_position is not None:
+            logging.info('abandoning goto, left map')
+            self.stop_moving()
         self.last_map = self.current_map
         self.current_map = ''
 
@@ -423,8 +429,8 @@ class DBot:
         self,
         e: events.Update,
     ) -> None:
-        me = self.logged_in_players[self.name]
-        me[e.key] = e.value
+        # me = self.logged_in_players[self.name]
+        self.state[e.key] = e.value
         if e.key == 'partyPromptedPlayerUsername':
             self.party_request_from = str(e.value)
             self.party_request_open = True
