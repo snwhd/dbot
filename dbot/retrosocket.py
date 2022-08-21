@@ -125,7 +125,7 @@ class GlobalNamespace(socketio.ClientNamespace):
         """ overrididing ClientNamespace """
         handler_name = f'on_{event}'
         if not hasattr(self, handler_name):
-            logging.info(f'not handled: {event} ({data})')
+            logging.info(f'not handled: {event} ({args})')
             return
 
         handler = getattr(self, handler_name)
@@ -181,8 +181,7 @@ class GlobalNamespace(socketio.ClientNamespace):
         logging.info('disconnected')
 
     def on_signedIn(self, data):
-        require_args(data, 1)
-        uuid = expect_string(data, 0)
+        uuid = assert_type(data, str)
         self.event_queue.put(
             events.SignedIn(uuid)
         )
@@ -239,8 +238,7 @@ class GlobalNamespace(socketio.ClientNamespace):
         )
 
     def on_joinMap(self, data):
-        require_args(data, 1)
-        map_name = expect_str(data, 1)
+        map_name = assert_type(data, str)
         self.event_queue.put(
             events.JoinMap(map_name)
         )
@@ -314,9 +312,9 @@ class GlobalNamespace(socketio.ClientNamespace):
     #
 
     def on_message(self, data):
-        months = try_type(data['monthsSubcribed'], int) or 0
+        months = try_type(data['monthsSubscribed'], int) or 0
         permissions = expect_int(data, 'permissions')
-        subcriber = expect_bool(data, 'subscriber')
+        subscriber = expect_bool(data, 'subscriber')
         username = expect_str(data, 'username')
         contents = expect_str(data, 'contents')
         warning = expect_bool(data, 'warning')

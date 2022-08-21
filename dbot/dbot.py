@@ -56,6 +56,7 @@ class DBot:
 
         self.ui = UIState()
         self.command_handler = CommandHandler(self, 'dbots')
+        self.command_handler.add_default_commands()
 
         self.max_errors = 0
 

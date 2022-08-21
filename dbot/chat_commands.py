@@ -130,7 +130,7 @@ class CommandHandler:
 
         config = self.commands.get(command)
         if config is None:
-            logging.info('no such command: {command}')
+            logging.info(f'no such command: {command}')
             return
 
         if config.admin_only and not self.is_admin(e.username):
