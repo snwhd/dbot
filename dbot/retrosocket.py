@@ -434,3 +434,4 @@ class RetroSocket:
         """ logout from retrommo """
         logging.info('logging out')
         self.socket.emit('logOut')
+
