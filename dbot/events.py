@@ -11,6 +11,7 @@ from .common import (
 
 
 class GameEvent:
+    """ Base for all event types """
 
     def __init__(
         self,
@@ -18,46 +19,20 @@ class GameEvent:
     ) -> None:
         self.event_name = name
 
-
-class ChallengePlayer(GameEvent):
-    # TODO
-
-    def __init__(self) -> None:
-        super().__init__('challengePlayer')
-
-
-class RequestPlayer(GameEvent):
-    # TODO
-
-    def __init__(self) -> None:
-        super().__init__('requestPlayer')
-
-
-class CloseBank(GameEvent):
-
-    def __init__(self) -> None:
-        super().__init__('closeBank')
-
-
-class StartTrade(GameEvent):
-
-    def __init__(self) -> None:
-        super().__init__('startTrade')
-
-
-class LeaveTrade(GameEvent):
-
-    def __init__(self) -> None:
-        super().__init__('leaveTrade')
+#
+# general
+#
 
 
 class Connected(GameEvent):
+    """ Websocket connected """
 
     def __init__(self) -> None:
         super().__init__('connected')
 
 
 class SignedIn(GameEvent):
+    """ This player signed in successfully """
 
     def __init__(
         self,
@@ -67,13 +42,8 @@ class SignedIn(GameEvent):
         self.uuid = uuid
 
 
-class StartCharacterSelect(GameEvent):
-
-    def __init__(self) -> None:
-        super().__init__('startCharacterSelect')
-
-
 class PlayerSignedIn(GameEvent):
+    """ A player has signed in """
 
     def __init__(
         self,
@@ -84,6 +54,7 @@ class PlayerSignedIn(GameEvent):
 
 
 class PlayerPreviouslySignedIn(GameEvent):
+    """ List of players already signed in """
 
     def __init__(
         self,
@@ -98,7 +69,66 @@ class PlayerPreviouslySignedIn(GameEvent):
 # class CharacterSelectHasPagination
 
 
+class StartCharacterSelect(GameEvent):
+    """ Display character select screen """
+
+    def __init__(self) -> None:
+        super().__init__('startCharacterSelect')
+
+
+class Update(GameEvent):
+    """ Used to update all kinds of client side key-value pairs """
+
+    def __init__(
+        self,
+        key: str,
+        value: Union[int, str],
+    ) -> None:
+        super().__init__('update')
+        self.value = value
+        self.key = key
+
+
+#
+# movement
+#
+
+
+class MovePlayer(GameEvent):
+    """ Some player moved """
+
+    def __init__(
+        self,
+        direction: Direction,
+        username: str,
+    ) -> None:
+        super().__init__('movePlayer')
+        self.direction = direction
+        self.username = username
+
+
+class Bonk(GameEvent):
+    """ Bonked a wall """
+
+    def __init__(self) -> None:
+        super().__init__('bonk')
+
+
+class Transport(GameEvent):
+    """ Teleport to coords within map """
+
+    def __init__(
+        self,
+        x: int,
+        y: int,
+    ) -> None:
+        super().__init__('transport')
+        self.x = x
+        self.y = y
+
+
 class JoinMap(GameEvent):
+    """ This player has joined the map """
 
     def __init__(
         self,
@@ -108,7 +138,31 @@ class JoinMap(GameEvent):
         self.map_name = name
 
 
+class LeaveMap(GameEvent):
+    """ This player has left the current map """
+
+    def __init__(self) -> None:
+        super().__init__('leaveMap')
+
+
+class PlayerLeftMap(GameEvent):
+    """ A player left the current map """
+
+    def __init__(
+        self,
+        username: str,
+    ) -> None:
+        super().__init__('playerLeftMap')
+        self.username = username
+
+
+#
+# players
+#
+
+
 class PlayerUpdate(GameEvent):
+    """ Updates player-specific key-value pairs """
 
     def __init__(
         self,
@@ -122,71 +176,8 @@ class PlayerUpdate(GameEvent):
         self.key = key
 
 
-class MovePlayer(GameEvent):
-
-    def __init__(
-        self,
-        direction: Direction,
-        username: str,
-    ) -> None:
-        super().__init__('movePlayer')
-        self.direction = direction
-        self.username = username
-
-
-class Bonk(GameEvent):
-
-    def __init__(self) -> None:
-        super().__init__('bonk')
-
-
-class Update(GameEvent):
-
-    def __init__(
-        self,
-        key: str,
-        value: Union[int, str],
-    ) -> None:
-        super().__init__('update')
-        self.value = value
-        self.key = key
-
-
-class OpenBank(GameEvent):
-
-    def __init__(self) -> None:
-        super().__init__('openBank')
-
-
-class Transport(GameEvent):
-
-    def __init__(
-        self,
-        x: int,
-        y: int,
-    ) -> None:
-        super().__init__('transport')
-        self.x = x
-        self.y = y
-
-
-class PlayerLeftMap(GameEvent):
-
-    def __init__(
-        self,
-        username: str,
-    ) -> None:
-        super().__init__('playerLeftMap')
-        self.username = username
-
-
-class LeaveMap(GameEvent):
-
-    def __init__(self) -> None:
-        super().__init__('leaveMap')
-
-
 class SelectPlayer(GameEvent):
+    """ A player has been selected -> display menu """
 
     def __init__(
         self,
@@ -196,7 +187,13 @@ class SelectPlayer(GameEvent):
         self.username = username
 
 
+#
+# parties
+#
+
+
 class InvitePlayer(GameEvent):
+    """ A player has been invited to a party """ # TODO
 
     def __init__(
         self,
@@ -207,6 +204,7 @@ class InvitePlayer(GameEvent):
 
 
 class Party(GameEvent):
+    """ A new player joines the party """
 
     def __init__(
         self,
@@ -217,8 +215,53 @@ class Party(GameEvent):
         self.party_id = party_id
         self.party = party
 
+#
+# battles
+#
+
+
+class ChallengePlayer(GameEvent):
+    """ A battle request is sent """
+    # TODO
+
+    def __init__(self) -> None:
+        super().__init__('challengePlayer')
+
+
+#
+# trades
+#
+
+
+class RequestPlayer(GameEvent):
+    """ A trade request is sent """
+    # TODO
+
+    def __init__(self) -> None:
+        super().__init__('requestPlayer')
+
+
+class StartTrade(GameEvent):
+    """ Trade was accepted, begin trade """
+
+    def __init__(self) -> None:
+        super().__init__('startTrade')
+
+
+class LeaveTrade(GameEvent):
+    """ Exit trade for any reason """
+
+    def __init__(self) -> None:
+        super().__init__('leaveTrade')
+
+
+#
+# chat
+#
+
 
 class Message(GameEvent):
+    """ A chat message """
 
     def __init__(
         self,
@@ -242,3 +285,23 @@ class Message(GameEvent):
         self.subscriber = subscriber
         self.username = username
         self.warning = warning
+
+
+#
+# banking
+#
+
+
+class OpenBank(GameEvent):
+    """ Bank UI has been opened """
+
+    def __init__(self) -> None:
+        super().__init__('openBank')
+
+
+class CloseBank(GameEvent):
+    """ Bank UI has been closed """
+
+    def __init__(self) -> None:
+        super().__init__('closeBank')
+
