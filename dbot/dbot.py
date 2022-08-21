@@ -36,6 +36,20 @@ class BotAction(enum.Enum):
     grind = 'grind'
 
 
+class ActionState(enum.Enum):
+
+    none = 'none'
+
+    # party up
+    waiting_for_players = 'waiting for players'
+    selecting_player = 'selecting player'
+    inviting_player = 'inviting player'
+    moving_to_leader = 'moving to leader'
+    awaiting_invite = 'awaiting invite'
+    accepted_party = 'accepted party'
+    joined_party = 'joined party'
+
+
 class GrindTarget(enum.Enum):
 
     none = 'none'
@@ -46,6 +60,10 @@ class GrindTarget(enum.Enum):
     gobble = 'gobble'
     bday_cave = 'bday cave'
     bday_rush = 'bday rush'
+
+
+# TODO: split DBot stuff out into separate classes for action /
+#       battle / command state.
 
 
 class DBot:
@@ -73,14 +91,27 @@ class DBot:
         self.admins = admins
         self.max_errors = 0
 
+        self.logging_out = False
+        self.logged_out = False
+
         self._socket: Optional[RetroSocket] = None
 
         self.current_action = BotAction.none
+        self.current_state = ActionState.none
         self.logged_in_players: Dict[str, Any] = {}
 
         # state: party up
+        self.invites_sent: Dict[str, float] = {}
+        self.current_party: List[str] = []
         self.target_party: List[str] = []
         self.in_party = False
+
+        self.player_select_open = False
+        self.player_selected = ''
+        self.party_request_open = False
+        self.party_request_from = ''
+
+        self.last_action_at = 0.0
 
         # movement state
         self.target_position: Optional[Tuple[int, int]] = None
@@ -120,6 +151,10 @@ class DBot:
             },
             'logout': {
                 'handler': self.command_logout,
+                'admin': True,
+            },
+            'reset': {
+                'handler': self.command_reset,
                 'admin': True,
             },
         }
@@ -181,9 +216,15 @@ class DBot:
         friends = self.logged_in_friends(include_self=True)
         return len(friends) == 0 or friends[0] == self.name
 
-    def identify_party(self) -> List[str]:
-        # TODO: exclude source
+    def identify_party(
+        self,
+        exclude: Optional[List[str]] = [],
+    ) -> List[str]:
         friends = self.logged_in_friends(include_self=True)
+        for f in exclude or []:
+            if f in friends:
+                friends.remove(f)
+
         logging.debug(f'logged in: {friends}')
         parties = [friends[i:i+3] for i in range(0, len(friends), 3)]
         for party in parties:
@@ -209,7 +250,7 @@ class DBot:
                     self._socket = s
                     last_action = 0.0
                     action_threshold = 0.5
-                    while True:
+                    while not self.logging_out:
                         current = time.time()
                         do_action = (current - last_action) > action_threshold
                         self.step(do_action)
@@ -424,7 +465,11 @@ class DBot:
         self,
         e: events.Update,
     ) -> None:
-        ...
+        me = self.logged_in_players[self.name]
+        me[e.key] = e.value
+        if e.key == 'partyPromptedPlayerUsername':
+            self.party_request_from = str(e.value)
+            self.party_request_open = True
 
     def handle_openBank(
         self,
@@ -448,7 +493,8 @@ class DBot:
         self,
         e: events.LeaveMap,
     ) -> None:
-        ...
+        if self.logging_out:
+            self.logged_out = True
 
     def handle_message(
         self,
@@ -462,6 +508,27 @@ class DBot:
             self.do_command(e.contents, e.username, e.channel)
         else:
             logging.debug(f'message skipped: {e.contents}')
+
+    def handle_selectPlayer(
+        self,
+        e: events.SelectPlayer,
+    ) -> None:
+        self.player_select_open = True
+        self.player_selected = e.username
+
+    def handle_invitePlayer(
+        self,
+        e: events.InvitePlayer,
+    ) -> None:
+        ...
+
+    def handle_party(
+        self,
+        e: events.Party,
+    ) -> None:
+        logging.debug(f'handle_party: {e.party}')
+        self.in_party = len(e.party) > 0
+        self.current_party = e.party
 
     def do_command(
         self,
@@ -551,7 +618,7 @@ class DBot:
     ) -> None:
         if len(parts) > 0 and parts[0] == 'up':
             parts.pop(0)
-            self.target_party = self.identify_party()
+            self.target_party = self.identify_party(exclude=[source])
         elif len(parts) > 2:
             friends = self.logged_in_friends()
             bots = list(filter(
@@ -568,6 +635,7 @@ class DBot:
             self.current_action = BotAction.none
             return
 
+        logging.debug('new action: party_up')
         self.current_action = BotAction.party_up
         leader_name = self.party_leader()
         assert leader_name is not None
@@ -618,7 +686,18 @@ class DBot:
         channel: str,
     ) -> None:
         self.socket.send_logout()
+        self.logging_out = True
 
+    def command_reset(
+        self,
+        command: str,
+        parts: List[str],
+        source: str,
+        channel: str,
+    ) -> None:
+        self.current_action = BotAction.none
+        self.current_state = ActionState.none
+        # TODO: leave party
 
     def step(
         self,
@@ -674,8 +753,102 @@ class DBot:
             self.stop_moving()
 
     def action(self) -> None:
-        ...
-            
+        if self.current_action == BotAction.party_up:
+            if self.is_party_leader():
+                self.action_party_up_leader()
+            else:
+                self.action_party_up()
+        else:
+            pass
+
+    def action_party_up_leader(self) -> None:
+        now = time.time()
+        logging.debug(f'party_up (leader) - {self.current_state.value}')
+
+        if self.current_state == ActionState.none:
+            self.current_state = ActionState.waiting_for_players
+
+        if len(self.current_party) == len(self.target_party):
+            logging.debug(f'party complete: {self.current_party} == {self.target_party}')
+            self.current_state = ActionState.joined_party
+        elif self.current_state == ActionState.waiting_for_players:
+            for name in self.target_party:
+                if name == self.name:
+                    continue
+                me = self.logged_in_players[self.name]
+                player = self.logged_in_players[name]
+                player_x = player['coords']['x']
+                player_y = player['coords']['y']
+                if (
+                    abs(player_x - me['coords']['x']) <= 1 and
+                    abs(player_y - me['coords']['y']) <= 1
+                ):
+                    sent_at = self.invites_sent.get(name)
+                    if sent_at is None or (now - sent_at) > 3.5:
+                        logging.debug(f'sending invite to: {name}')
+                        self.invites_sent[name] = now
+                        self.click_at_tile(player_x, player_y)
+                        self.current_state = ActionState.selecting_player
+                        self.last_action_at = now
+                        return
+                else:
+                    logging.debug(f'{name} too far away ({player_x}, {player_y})')
+        elif self.current_state == ActionState.selecting_player:
+            if self.player_select_open:
+                if self.player_selected in self.target_party:
+                    self.socket.send_click(*UIPositions.PARTY_INVITE)
+                    logging.debug(f'sent invite to {self.player_selected}')
+                else:
+                    logging.info(f'click wrong player ({self.player_selected})')
+                    self.socket.send_click(*UIPositions.PLAYER_SELECT_EXIT)
+                self.player_selected = ''
+                self.player_select_open = False
+                self.current_state = ActionState.waiting_for_players
+                self.last_action_at = now
+            elif now - self.last_action_at > 0.5:
+                logging.info('player select didnt pop up')
+                self.current_state = ActionState.waiting_for_players
+                self.last_action_at = now
+
+    def action_party_up(self) -> None:
+        logging.debug(f'party_up (follower) - {self.current_state.value}')
+
+        if self.current_state == ActionState.none:
+            self.current_state = ActionState.moving_to_leader
+            return
+        elif self.current_state == ActionState.moving_to_leader:
+            leader_name = self.party_leader()
+            assert leader_name is not None
+            leader = self.logged_in_players[leader_name]
+            me = self.logged_in_players[self.name]
+            if (
+                self.target_position is None and
+                abs(leader['coords']['x'] - me['coords']['x']) <= 1 and
+                abs(leader['coords']['y'] - me['coords']['y']) <= 1
+            ):
+                self.current_state = ActionState.awaiting_invite
+                return
+        elif self.current_state == ActionState.awaiting_invite:
+            if self.party_request_open:
+                if self.party_request_from == self.party_leader():
+                    self.socket.send_click(*UIPositions.ACCEPT_INVITE)
+                    self.current_state = ActionState.accepted_party
+                else:
+                    self.socket.send_click(*UIPositions.DECLINE_INVITE)
+                    self.current_state = ActionState.awaiting_invite
+        elif self.current_state == ActionState.accepted_party:
+            if self.in_party:
+                self.current_stae = ActionState.joined_party
+
+    def click_at_tile(
+        self,
+        x: int,
+        y: int,
+    ) -> None:
+        me = self.logged_in_players[self.name]
+        screen_x = 150 - (me['coords']['x'] - x) * 16
+        screen_y = 120 - (me['coords']['y'] - y) * 16
+        self.socket.send_click(screen_x, screen_y)
 
 
 if __name__ == '__main__':

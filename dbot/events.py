@@ -154,6 +154,38 @@ class LeaveMap(GameEvent):
         super().__init__('leaveMap')
 
 
+class SelectPlayer(GameEvent):
+
+    def __init__(
+        self,
+        username: str,
+    ) -> None:
+        super().__init__('selectPlayer')
+        self.username = username
+
+
+class InvitePlayer(GameEvent):
+
+    def __init__(
+        self,
+        username: str,
+    ) -> None:
+        super().__init__('invitePlayer')
+        self.username = username
+
+
+class Party(GameEvent):
+
+    def __init__(
+        self,
+        party: List[str],
+        party_id: int,
+    ) -> None:
+        super().__init__('party')
+        self.party_id = party_id
+        self.party = party
+
+
 class Message(GameEvent):
 
     def __init__(

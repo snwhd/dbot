@@ -33,7 +33,6 @@ class GlobalNamespace(socketio.ClientNamespace):
     def trigger_event(self, event, *args):
         handler_name = f'on_{event}'
         if hasattr(self, handler_name):
-            logging.debug(f'calling {handler_name}')
             try:
                 getattr(self, handler_name)(*args)
             except Exception as e:
@@ -92,6 +91,28 @@ class GlobalNamespace(socketio.ClientNamespace):
 
         map_name = data[0]
         self.event_queue.put(events.JoinMap(map_name))
+
+    def on_selectPlayer(self, data):
+        if len(data) < 1:
+            logging.warning('missing player in selectPlayer')
+            return
+        username = data
+        self.event_queue.put(events.SelectPlayer(username))
+
+    def on_invitePlayer(self, data):
+        if len(data) < 1:
+            logging.warning('missing player in invitePlayer')
+            return
+        username = data
+        self.event_queue.put(events.InvitePlayer(username))
+
+    def on_party(self, data):
+        party = data['party']
+        pid = data['partyID']
+        self.event_queue.put(events.Party(
+            party,
+            pid,
+        ))
 
     def on_playerUpdate(self, data):
         key = data['key']
