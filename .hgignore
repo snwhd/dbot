@@ -13,5 +13,5 @@ pyretrommo.egg-info/
 pyretrommo/gen/wiki_cache
 
 config.json
-notes_proto.txt
+notes_.*.txt
 test.py
