@@ -174,7 +174,7 @@ class CommandHandler:
         direct: bool,
     ) -> None:
         if parts == ['are', 'you']:
-            gmap = self.bot.current_map or self.bot.last_map
+            gmap = self.bot.state.map()
             pos = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
             message = f"I'm at {gmap} {pos}"
             self.bot.say(message, channel)
@@ -188,7 +188,7 @@ class CommandHandler:
     ) -> None:
         print('--- debug command ---')
         print('#   players   #')
-        pprint.pprint(self.bot.logged_in_players)
+        pprint.pprint(self.bot.state.players)
         print('---------------------')
 
     def command_grind(

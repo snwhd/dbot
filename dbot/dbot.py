@@ -35,8 +35,9 @@ from dbot.common import (
 from dbot.chat_commands import (
     CommandHandler,
 )
-from dbot.uistate import UIState
 from dbot.retrosocket import RetroSocket
+from dbot.state import GameState
+from dbot.uistate import UIState
 
 
 class DBot:
@@ -49,31 +50,25 @@ class DBot:
         friends: List[str] = [],
         admins: List[str] = [],
     ) -> None:
-        self.name = name
-        self.email = email
         self.password = password
         self.friends = friends
         self.admins = admins
+        self.email = email
+        self.name = name
 
-        self.ui = UIState()
         self.command_handler = CommandHandler(self, 'dbots')
         self.command_handler.add_default_commands()
 
+        self._socket: Optional[RetroSocket] = None
+        self.logging_out = False
         self.max_errors = 0
 
-        self.state: Dict[str, Any] = {}
-
-        self.logging_out = False
-
-        self._socket: Optional[RetroSocket] = None
+        self.state = GameState()
+        self.ui = UIState()
 
         self.current_action = BotAction.none
         self.current_state = ActionState.none
 
-        self.last_map  = ''
-        self.current_map = ''
-        self.players_in_map: Set[str] = set()
-        self.logged_in_players: Dict[str, Any] = {}
 
         # state: party up
         self.invites_sent: Dict[str, float] = {}
@@ -107,7 +102,7 @@ class DBot:
 
     @property
     def me(self) -> Dict[str, Any]:
-        return self.logged_in_players[self.name]
+        return self.state.players[self.name]
 
     @classmethod
     def load_from_config(
@@ -150,7 +145,7 @@ class DBot:
     ) -> List[str]:
         logged_in_bots: List[str] = []
         for friend in self.friends:
-            if friend in self.logged_in_players:
+            if friend in self.state.players:
                 logged_in_bots.append(friend)
         if include_self:
             logged_in_bots.append(self.name)
@@ -224,9 +219,9 @@ class DBot:
         player: PlayerData,
     ) -> None:
         username = player.username
-        if username in self.logged_in_players:
+        if username in self.state.players:
             logging.warning(f'player already logged in? {username}')
-        self.logged_in_players[username] = {
+        self.state.players[username] = {
             'username': username,
         }
 
@@ -324,8 +319,7 @@ class DBot:
         self,
         e: events.JoinMap,
     ) -> None:
-        assert self.current_map == ''
-        self.current_map = e.map_name
+        self.state.join_map(e.map_name)
 
     def handle_leaveMap(
         self,
@@ -334,33 +328,32 @@ class DBot:
         if self.target_position is not None:
             logging.info('abandoning goto, left map')
             self.stop_moving()
-        self.last_map = self.current_map
-        self.current_map = ''
+        self.state.left_map()
 
     def handle_playerLeftMap(
         self,
         e: events.PlayerLeftMap,
     ) -> None:
-        if e.username in self.players_in_map:
-            self.players_in_map.remove(e.username)
+        if e.username in self.state.players_in_map:
+            self.state.players_in_map.remove(e.username)
 
     def handle_playerUpdate(
         self,
         e: events.PlayerUpdate,
     ) -> None:
-        player = self.logged_in_players.get(e.username)
+        player = self.state.players.get(e.username)
         if player is None:
             logging.warning(f'missing player moved: {e.username}')
         else:
             if e.username != self.name:
-                self.players_in_map.add(e.username)
+                self.state.players_in_map.add(e.username)
             player[e.key] = e.value
 
     def handle_movePlayer(
         self,
         e: events.MovePlayer,
     ) -> None:
-        player = self.logged_in_players.get(e.username)
+        player = self.state.players.get(e.username)
         if player is None:
             logging.warning(f'missing player moved: {e.username}')
             return
@@ -429,8 +422,7 @@ class DBot:
         self,
         e: events.Update,
     ) -> None:
-        # me = self.logged_in_players[self.name]
-        self.state[e.key] = e.value
+        self.state.vars[e.key] = e.value
         if e.key == 'partyPromptedPlayerUsername':
             self.party_request_from = str(e.value)
             self.party_request_open = True
@@ -486,7 +478,7 @@ class DBot:
             return
 
         tx, ty = self.target_position
-        player = self.logged_in_players[self.name]
+        player = self.state.players[self.name]
         x = player['coords']['x']
         y = player['coords']['y']
         # TODO: smarter pathfinding, need to parse map
@@ -535,8 +527,8 @@ class DBot:
             for name in self.target_party:
                 if name == self.name:
                     continue
-                me = self.logged_in_players[self.name]
-                player = self.logged_in_players[name]
+                me = self.state.players[self.name]
+                player = self.state.players[name]
                 player_x = player['coords']['x']
                 player_y = player['coords']['y']
                 if (
@@ -579,8 +571,8 @@ class DBot:
         elif self.current_state == ActionState.moving_to_leader:
             leader_name = self.party_leader()
             assert leader_name is not None
-            leader = self.logged_in_players[leader_name]
-            me = self.logged_in_players[self.name]
+            leader = self.state.players[leader_name]
+            me = self.state.players[self.name]
             if (
                 self.target_position is None and
                 abs(leader['coords']['x'] - me['coords']['x']) <= 1 and
@@ -627,7 +619,7 @@ class DBot:
         self.current_action = BotAction.party_up
         leader_name = self.party_leader()
         assert leader_name is not None
-        leader = self.logged_in_players[leader_name]
+        leader = self.state.players[leader_name]
         party_position = self.target_party.index(self.name)
         if party_position != 0:
             target_x = int(leader['coords']['x'])
@@ -643,7 +635,7 @@ class DBot:
         x: int,
         y: int,
     ) -> None:
-        me = self.logged_in_players[self.name]
+        me = self.state.players[self.name]
         screen_x = 150 - (me['coords']['x'] - x) * 16
         screen_y = 120 - (me['coords']['y'] - y) * 16
         self.socket.send_click(screen_x, screen_y)
