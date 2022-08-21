@@ -89,6 +89,7 @@ class PlayerUpdate(GameEvent):
         self.value = value
         self.key = key
 
+
 class MovePlayer(GameEvent):
 
     def __init__(
@@ -96,8 +97,16 @@ class MovePlayer(GameEvent):
         direction: Direction,
         username: str,
     ) -> None:
+        super().__init__('movePlayer')
         self.direction = direction
         self.username = username
+
+
+class Bonk(GameEvent):
+
+    def __init__(self) -> None:
+        super().__init__('bonk')
+
 
 class Update(GameEvent):
 
@@ -143,7 +152,6 @@ class LeaveMap(GameEvent):
 
     def __init__(self) -> None:
         super().__init__('leaveMap')
-
 
 
 class Message(GameEvent):

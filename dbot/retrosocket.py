@@ -13,7 +13,10 @@ import time
 import traceback
 
 import dbot.events as events
-from dbot.common import PlayerData
+from dbot.common import (
+    Direction,
+    PlayerData,
+)
 
 
 class GlobalNamespace(socketio.ClientNamespace):
@@ -99,6 +102,18 @@ class GlobalNamespace(socketio.ClientNamespace):
             key,
             value,
         ))
+
+    def on_movePlayer(self, data):
+        direction = Direction(data['direction'])
+        username = data['username']
+        assert isinstance(username, str)
+        self.event_queue.put(events.MovePlayer(
+            direction,
+            username,
+        ))
+
+    def on_bonk(self, data):
+        self.event_queue.put(events.Bonk())
 
     def on_update(self, data):
         key = data['key']
@@ -267,6 +282,24 @@ class RetroSocket:
                 'y': y,
             },
         })
+
+    def send_keyup(
+        self,
+        key: str,
+    ) -> None:
+        self.socket.emit('keyup', key)
+        logging.debug(f'keyup: {key}')
+
+    def send_keydown(
+        self,
+        key: str,
+    ) -> None:
+        self.socket.emit('keydown', key)
+        logging.debug(f'keydown: {key}')
+
+    def send_logout(self) -> None:
+        logging.info('logging out')
+        self.socket.emit('logOut')
 
 if __name__ == '__main__':
     with RetroSocket() as s:
