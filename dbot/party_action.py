@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import (
     Dict,
 )
@@ -62,7 +63,7 @@ class PartyAction:
         self,
         new_state: PartyActionState,
     ) -> None:
-        assert self.state != PartyActionState.complete
+        assert self.state != PartyActionState.complete, new_state
         if self.bot.party.target_leader_is_me:
             assert new_state not in {
                 PartyActionState.moving,
@@ -75,6 +76,7 @@ class PartyAction:
                 PartyActionState.selecting,
             }, 'follower given leader state'
         self.state = new_state
+        logging.debug(f'new action state: {self.state.value}')
 
     def step(self) -> None:
        self. state_handlers[self.state]()
@@ -82,6 +84,7 @@ class PartyAction:
     def do_waiting(self) -> None:
         if self.bot.party.is_complete:
             self.set_state(PartyActionState.complete)
+            return
 
         now = time.time()
         for name in self.bot.party.target:
@@ -124,12 +127,12 @@ class PartyAction:
         assert leader is not None
         me = self.bot.me
         if (
-            self.bot.party.target_position is None and
+            self.bot.target_position is None and
             abs(leader['coords']['x'] - me['coords']['x']) <= 1 and
             abs(leader['coords']['y'] - me['coords']['y']) <= 1
         ):
             self.set_state(PartyActionState.awaiting)
-        elif self.bot.party.target_position is None:
+        elif self.bot.target_position is None:
             # TODO: shouldn't hit this, but reset to target pos
             ...
 
@@ -155,7 +158,7 @@ class PartyAction:
             assert leader is not None
             target_x = int(leader['coords']['x'])
             target_y = int(leader['coords']['y'])
-            pos = self.bot.party.target_position
+            pos = self.bot.target_position
             if pos == 1:
                 target_x -= 1
             else:

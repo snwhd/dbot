@@ -429,6 +429,7 @@ class DBot:
             self.command_handler.handle(e)
         except Exception as e:
             logging.warning(f'exception parsing command: {e}')
+            traceback.print_exc()
 
     def handle_selectPlayer(
         self,
@@ -442,8 +443,7 @@ class DBot:
         e: events.Party,
     ) -> None:
         logging.debug(f'handle_party: {e.party}')
-        self.in_party = len(e.party) > 0
-        self.current_party = e.party
+        self.party.update_party(e.party)
 
     def step(
         self,
@@ -461,7 +461,8 @@ class DBot:
         self,
         event: events.GameEvent,
     ) -> None:
-        handler = getattr(self, f'handle_{event.event_name}')
+        self.ui.check_event(event)
+        handler = getattr(self, f'handle_{event.event_name}', None)
         if handler is not None:
             handler(event)
         else:
@@ -514,6 +515,8 @@ class DBot:
         x: int,
         y: int,
     ) -> None:
+        if x == self.me['coords']['x'] and y == self.me['coords']['y']:
+            return
         self.target_position = (x, y)
         self.bonked = [False, False]
 

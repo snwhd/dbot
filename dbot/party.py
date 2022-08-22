@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import (
     Dict,
     List,
@@ -82,11 +83,11 @@ class Party:
         assert len(target) <= 3
         self.target = target
 
-    def player_joined(
+    def update_party(
         self,
-        player: str,
+        players: List[str],
     ) -> None:
-        self.players.append(player)
+        self.players = list(players)
 
     def player_left(
         self,

@@ -116,22 +116,20 @@ class CommandHandler:
         self,
         e: events.Message,
     ) -> None:
-        parts = shlex.split(e.contents)
-        if len(parts) < 1:
+        try:
+            parts = shlex.split(e.contents)
+        except ValueError:
+            return
+
+        if len(parts) < 2:
             return
 
         prompt = parts.pop(0)
         if not self.should_handle(prompt):
             return
 
-        direct = False
-        command = prompt
-        if prompt == self.bot.name:
-            # direct command e.g. 'abot debug'
-            if len(parts) < 1:
-                return
-            command = parts.pop(0)
-            direct = True
+        command = parts.pop(0)
+        direct = prompt == self.bot.name
 
         config = self.commands.get(command)
         if config is None:
