@@ -272,4 +272,4 @@ class CommandHandler:
         channel: str,
         direct: bool,
     ) -> None:
-        self.bot.check_stats_and_report()
+        self.bot.check_stats_and_report(channel)

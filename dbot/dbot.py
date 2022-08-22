@@ -96,6 +96,7 @@ class DBot:
         self.move_ready = True
 
         self.report_state = 'none'
+        self.report_channel = 'wsay'
 
     @property
     def socket(self) -> RetroSocket:
@@ -554,7 +555,11 @@ class DBot:
         self.socket.send_logout()
         self.logging_out = True
 
-    def check_stats_and_report(self) -> None:
+    def check_stats_and_report(
+        self,
+        channel: str,
+    ) -> None:
+        self.report_channel = channel
         if self.battle is not None:
             self.report("in battle, ")
         elif self.report_state == 'none':

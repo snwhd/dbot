@@ -17,8 +17,11 @@ import dbot.events as events
 class BattleState(enum.Enum):
 
     not_in_battle = 'not in battle'
+
     waiting = 'waiting'
     ready = 'ready'
+    selected = 'selected'
+    targetted = 'targetted'
 
 
 class BattleController:
@@ -37,6 +40,8 @@ class BattleController:
 
     def step(self) -> None:
         if self.state == BattleState.waiting:
+            # waiting for round to complete -> do nothing
+            #                               -> go to ready state
             if time.time() > self.next_round:
                 logging.debug('next round ready')
                 self.state = BattleState.ready
@@ -46,9 +51,12 @@ class BattleController:
         e: events.GameEvent,
     ) -> bool:
         if isinstance(e, events.PlayOutBattleRound):
+            if not self.state == BattleState.targetted:
+                logging.info('round when not targetted?')
             seconds = float(e.duration) / 1000.0
             logging.debug(f'next round in {seconds} seconds')
             self.next_round = time.time() + seconds + 0.5
+            self.state = BattleState.waiting
             return True
         return False
 
@@ -73,15 +81,17 @@ class SimpleClericController(BattleController):
     def step(self) -> None:
         super().step()
         if self.state == BattleState.ready:
+            # ready state -> pick ability/target
+            #             -> goto selected state
+
             # TODO: move this to base class for easier override?
             # TODO: selecting ability and target
             self.next_ability = 1
             self.next_target = 1
 
-            assert self.next_ability is not None
             logging.debug(f'using {self.next_ability} on {self.next_target}')
             self.bot.socket.send_keypress(str(self.next_ability))
-            self.state = BattleState.waiting
+            self.state = BattleState.selected
 
     def check_event(
         self,
@@ -94,10 +104,15 @@ class SimpleClericController(BattleController):
                 e.key == 'selectedAbility' and
                 e.value is not None
             ):
+                # selected ability -> send target choice
+                #                  -> go to targetted state
+                if self.state != BattleState.selected:
+                    logging.info('selected but not in state?')
                 assert self.next_target is not None
                 self.bot.socket.send_keypress(str(self.next_target))
                 self.next_ability = None
                 self.next_target  = None
+                self.state = BattleState.targetted
                 return True
         return False
 
