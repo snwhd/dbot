@@ -28,6 +28,10 @@ from dbot.pathfinding import (
     Point,
     TownPathfinder,
 )
+from dbot.grind_action import (
+    GrindAction,
+    GrindTarget,
+)
 
 from dbot.action import Action
 from dbot.battle import Battle
@@ -340,7 +344,7 @@ class DBot:
             self.stop_moving()
             return
 
-        near_threshold = 4
+        near_threshold = 2
 
         if e.direction in (Direction.down, Direction.up):
             diff = abs(player['coords']['y'] - self.target_position[1])
@@ -471,6 +475,9 @@ class DBot:
             self.bonked = [False, False]
             self.stop_moving()
 
+        if self.target_position is None and len(self.movement_queue) > 0:
+            self.target_position = self.movement_queue.pop(0)
+
     def action(self) -> None:
         if self.current_action is not None:
             self.current_action.step()
@@ -507,6 +514,12 @@ class DBot:
     ) -> None:
         self.party.set_target(party)
         self.current_action = PartyAction(self)
+
+    def grind(
+        self,
+    ) -> None:
+        # TODO: other targets
+        self.current_action = GrindAction(self, GrindTarget.field_west)
 
     def click_at_tile(
         self,

@@ -249,8 +249,8 @@ class GlobalNamespace(socketio.ClientNamespace):
     # TODO playerUpdate(selectedAbility)
     # TODO playerUpdate(selectedTarget)
     def on_battleEvents(self, data):
-        events = list(map(battleEvent.decode_from, assert_type(data, list)))
-        return events.BattleEvents(events)
+        es = list(map(BattleEvent.decode_from, assert_type(data, list)))
+        return events.BattleEvents(es)
 
     #
     # trades

@@ -98,3 +98,13 @@ class TownPathfinder:
         else:
             raise ValueError(f'cannot path from {area} to overworld')
         return path
+
+
+class OverworldPathfinder:
+
+    @staticmethod
+    def circle_field_west() -> List[Point]:
+        return [
+            (17, 30),
+            (21, 34),
+        ]

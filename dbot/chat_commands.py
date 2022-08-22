@@ -197,7 +197,7 @@ class CommandHandler:
         channel: str,
         direct: bool,
     ) -> None:
-        ...
+        self.bot.grind()
 
     def command_party(
         self,
@@ -228,7 +228,10 @@ class CommandHandler:
         channel: str,
         direct: bool,
     ) -> None:
-        if len(parts) < 2:
+        if self.bot.party.in_party and not self.bot.party.leader_is_me:
+            # can't control the party
+            return
+        elif len(parts) < 2:
             return
 
         if parts[0] == 'the':

@@ -14,12 +14,15 @@ if TYPE_CHECKING:
 from dbot.action import Action
 from dbot.uistate import UIScreen
 from dbot.common import UIPositions
+from dbot.pathfinding import (
+    OverworldPathfinder,
+    TownPathfinder,
+)
 
 
 class GrindTarget(enum.Enum):
-    none = 'none'
-    field1 = 'field1'
-    field2 = 'field2'
+    field_west = 'field_west'
+    field_east = 'field_east'
     cave1 = 'cave1'
     cave2 = 'cave2'
     gobble = 'gobble'
@@ -30,7 +33,7 @@ class GrindTarget(enum.Enum):
 class GrindActionState(enum.Enum):
 
     # leader
-    walking = 'waiting'
+    walking = 'walking'
     returning = 'returning'
 
     # follower
@@ -48,6 +51,7 @@ class GrindAction(Action):
     def __init__(
         self,
         bot: DBot,
+        target: GrindTarget,
     ) -> None:
         super().__init__(bot)
         self.state = GrindActionState.none
@@ -61,6 +65,7 @@ class GrindAction(Action):
             GrindActionState.reloading: self.do_reloading,
         }
         self.boss_defeated = False
+        self.target = target
 
     def set_state(
         self,
@@ -77,12 +82,38 @@ class GrindAction(Action):
         self.state = new_state
         logging.debug(f'new action state: {self.state.value}')
 
+    def at_target(self) -> bool:
+        if self.target == GrindTarget.field_west:
+            return self.bot.state.map() == 'overworld'
+        else:
+            raise NotImplementedError('only overworld grind.')
+
     def step(self) -> None:
        self. state_handlers[self.state]()
 
     def do_walking(self) -> None:
         if self.bot.battle is not None:
             self.set_state(GrindActionState.battle)
+            return
+        elif self.bot.party.in_party and not self.bot.party.leader_is_me:
+            # can't control the party
+            return
+        elif self.bot.target_position is not None:
+            # already in motion
+            return
+
+        if self.at_target():
+            # circle
+            path = OverworldPathfinder.circle_field_west()
+            self.bot.goto(path)
+        elif self.bot.state.map() == 'town':
+            src = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
+            path = TownPathfinder.path_to(src, 'overworld')
+            self.bot.goto(path)
+        else:
+            # TODO: pathfind from more than just town
+            logging.warning(f"can't pathfind from {self.bot.state.map}")
+            return
 
     def do_returning(self) -> None:
         if self.bot.battle is not None:
