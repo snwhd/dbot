@@ -4,7 +4,8 @@ from typing import (
     Union,
 )
 
-from .common import (
+from dbot.battle import BattleEvent
+from dbot.common import (
     Direction,
     PlayerData,
 )
@@ -243,6 +244,16 @@ class LeaveBattle(GameEvent):
 
     def __init__(self) -> None:
         super().__init__('leaveBattle')
+
+
+class BattleEvents(GameEvent):
+
+    def __init__(
+        self,
+        events: List[BattleEvent],
+    ) -> None:
+        super().__init__('battleEvents')
+        self.events = events
 
 
 #

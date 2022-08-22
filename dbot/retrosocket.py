@@ -18,87 +18,13 @@ import queue
 import time
 import traceback
 
+from dbot.battle import BattleEvent
 import dbot.events as events
 from dbot.common import (
     Direction,
     PlayerData,
 )
-
-
-#
-# First, some helper functions for typing socket messages
-#
-
-
-T = TypeVar('T')
-
-
-def assert_type(o: Any, t: Type[T]) -> T:
-    assert isinstance(o, t)
-    return o
-
-
-def try_type(o: Any, t: Type[T]) -> Optional[T]:
-    if isinstance(o, t):
-        return o
-    return None
-
-
-def expect_int(
-    d: Union[Collection[Any], Dict[str, Any]],
-    k: Union[int, str],
-) -> int:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], int)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], int)
-    raise ValueError(f'unsupported data type: {type(d)}')
-
-
-def expect_str(
-    d: Union[Collection[Any], Dict[str, Any]],
-    k: Union[int, str],
-) -> str:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], str)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], str)
-    raise ValueError(f'unsupported data type: {type(d)}')
-
-
-def expect_list(
-    d: Union[Collection[Any], Dict[str, Any]],
-    k: Union[int, str],
-) -> list:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], list)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], list)
-    raise ValueError(f'unsupported data type: {type(d)}')
-
-
-def expect_bool(
-    d: Union[Collection[Any], Dict[str, Any]],
-    k: Union[int, str],
-) -> bool:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], bool)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], bool)
-    raise ValueError(f'unsupported data type: {type(d)}')
-
-
-def require_args(d: Union[List, Dict], l: int) -> None:
-    if len(d) < l:
-        raise ValueError('not enough data')
+from dbot.type_help import *
 
 
 class GlobalNamespace(socketio.ClientNamespace):
@@ -323,46 +249,8 @@ class GlobalNamespace(socketio.ClientNamespace):
     # TODO playerUpdate(selectedAbility)
     # TODO playerUpdate(selectedTarget)
     def on_battleEvents(self, data):
-        # [
-        #     {
-        #         'ability': 'fireball',
-        #         'caster': {'group': 'team', 'index': 0, 'type': 'player'},
-        #         'casterName': 'bbot',
-        #         'endDuration': 3000,
-        #         'newMP': 16,
-        #         'startDuration': 0,
-        #         'target': {'group': 'enemies', 'index': 0, 'type': 'monster'},
-        #         'targetName': 'Spider',
-        #         'type': 'ability'
-        #     },
-        #     {
-        #         'amount': 18,
-        #         'endDuration': 3000,
-        #         'guarded': False,
-        #         'newHP': 0,
-        #         'recipient': {'group': 'enemies', 'index': 0, 'type': 'monster'},
-        #         'recipientName': 'Spider',
-        #         'startDuration': 1500,
-        #         'type': 'damage'
-        #     },
-        #     {
-        #       'endDuration': 4500,
-        #         'recipient': {'group': 'enemies', 'index': 0, 'type': 'monster'},
-        #         'recipientName': 'Spider',
-        #         'startDuration': 3000,
-        #         'type': 'death'
-        #     }
-        # ]
-        #...
-        # [
-        #  {'endDuration': 3000, 'escaped': False, 'startDuration': 0, 'type': 'victory'},
-        #  {'endDuration': 6000, 'gold': 2, 'startDuration': 3000, 'type': 'gold'},
-        #  {'endDuration': 6000,
-        #   'experience': 3,
-        #   'startDuration': 4500,
-        #   'type': 'experience'}]
-
-        ...
+        events = list(map(battleEvent.decode_from, assert_type(data, list)))
+        return events.BattleEvents(events)
 
     #
     # trades
@@ -405,7 +293,7 @@ class GlobalNamespace(socketio.ClientNamespace):
     # NPCs
     #
 
-    # TODO: NPC
+    # tODO: NPC
     # def on_npcUpdate(self, data):
 
 
