@@ -5,18 +5,12 @@ from typing import (
     Dict,
     List,
     Optional,
-    Set,
     Tuple,
-    Union,
 )
 
-import enum
 import json
 import logging
 import pathlib
-import pprint
-import random
-import shlex
 import time
 import traceback
 
@@ -59,28 +53,23 @@ class DBot:
         self.email = email
         self.name = name
 
+        # commands + actions
         self.command_handler = CommandHandler(self, 'dbots')
         self.command_handler.add_default_commands()
+        self.current_action: Optional[PartyAction] = None
 
+        # network / socket
         self._socket: Optional[RetroSocket] = None
         self.logging_out = False
         self.max_errors = 0
 
+        # game state
         self.party = Party(self, [self.name])
         self.state = GameState()
         self.ui = UIState()
 
-        self.current_action: Optional[PartyAction] = None
-
-        # state: party up
-        self.player_select_open = False
-        self.player_selected = ''
-        self.party_request_open = False
-        self.party_request_from = ''
-
-        self.last_action_at = 0.0
-
-        # movement state
+        # movement
+        # TODO: move stuff into a MovementController class
         self.target_position: Optional[Tuple[int, int]] = None
         self.moving = {
             Direction.up: False,
@@ -151,29 +140,6 @@ class DBot:
     def is_leader(self) -> bool:
         friends = self.logged_in_friends(include_self=True)
         return len(friends) == 0 or friends[0] == self.name
-
-    def identify_party(
-        self,
-        exclude: Optional[List[str]] = [],
-    ) -> List[str]:
-        friends = self.logged_in_friends(include_self=True)
-        for f in exclude or []:
-            if f in friends:
-                friends.remove(f)
-
-        logging.debug(f'logged in: {friends}')
-        parties = [friends[i:i+3] for i in range(0, len(friends), 3)]
-        for party in parties:
-            logging.debug(f'group: {party}')
-            if self.name in party:
-                return party
-        return [self.name]
-
-    def party_leader(self) -> str:
-        return self.party.target_leader
-
-    def is_party_leader(self) -> bool:
-        return self.party.target_leader_is_me
 
     def run_forever(self) -> None:
         n_errors = 0
@@ -416,10 +382,9 @@ class DBot:
         self,
         e: events.Update,
     ) -> None:
-        self.state.vars[e.key] = e.value
-        if e.key == 'partyPromptedPlayerUsername':
-            self.party_request_from = str(e.value)
-            self.party_request_open = True
+        # TODO: why isn't this used in UIState?
+        # if e.key == 'partyPromptedPlayerUsername':
+        ...
 
     def handle_message(
         self,
@@ -435,8 +400,7 @@ class DBot:
         self,
         e: events.SelectPlayer,
     ) -> None:
-        self.player_select_open = True
-        self.player_selected = e.username
+        ...
 
     def handle_party(
         self,
@@ -502,6 +466,10 @@ class DBot:
     def action(self) -> None:
         if self.current_action is not None:
             self.current_action.step()
+
+    #
+    # helper methods for command implementation
+    #
 
     def say(
         self,

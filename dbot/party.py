@@ -81,7 +81,7 @@ class Party:
         target: List[str],
     ) -> None:
         assert len(target) <= 3
-        self.target = target
+        self.target = list(sorted(target))
 
     def update_party(
         self,

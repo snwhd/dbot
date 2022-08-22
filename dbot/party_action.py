@@ -158,7 +158,7 @@ class PartyAction:
             assert leader is not None
             target_x = int(leader['coords']['x'])
             target_y = int(leader['coords']['y'])
-            pos = self.bot.target_position
+            pos = self.bot.party.target_position
             if pos == 1:
                 target_x -= 1
             else:

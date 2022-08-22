@@ -211,7 +211,7 @@ class CommandHandler:
             return
         
         # self.target_party = self.identify_party(exclude=[source])
-        target_party = self.bot.identify_party(exclude=[source])
+        target_party = self.bot.party.identify_party(exclude=[source])
         logging.debug(f'party: {target_party}')
         assert len(target_party) > 0
         if len(target_party) == 1:
