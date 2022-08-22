@@ -24,6 +24,10 @@ from dbot.common import (
 from dbot.chat_commands import (
     CommandHandler,
 )
+from dbot.pathfinding import (
+    Point,
+    TownPathfinder,
+)
 
 from dbot.action import Action
 from dbot.battle import Battle
@@ -69,6 +73,7 @@ class DBot:
 
         # movement
         # TODO: move stuff into a MovementController class
+        self.movement_queue: List[Point] = []
         self.target_position: Optional[Tuple[int, int]] = None
         self.moving = {
             Direction.up: False,
@@ -433,7 +438,11 @@ class DBot:
 
     def movement(self) -> None:
         if self.target_position is None:
-            return
+            if len(self.movement_queue) == 0:
+                # done with movement
+                return
+            # pop a new destination!
+            self.target_position = self.movement_queue.pop(0)
 
         tx, ty = self.target_position
         player = self.state.players[self.name]
@@ -479,12 +488,13 @@ class DBot:
 
     def goto(
         self,
-        x: int,
-        y: int,
+        path: List[Point],
     ) -> None:
-        if x == self.me['coords']['x'] and y == self.me['coords']['y']:
-            return
-        self.target_position = (x, y)
+        logging.info(f'new path: {path}')
+        self.movement_queue = path
+        # if x == self.me['coords']['x'] and y == self.me['coords']['y']:
+        #     return
+        self.target_position = None
         self.bonked = [False, False]
 
     def logout(self) -> None:

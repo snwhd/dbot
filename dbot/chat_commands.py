@@ -9,12 +9,13 @@ import random
 import shlex
 import pprint
 
-import dbot.events as events
-
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dbot.dbot import DBot
+
+import dbot.events as events
+from dbot.pathfinding import TownPathfinder
 
 
 HELLO_MESSAGES = [
@@ -227,14 +228,25 @@ class CommandHandler:
         channel: str,
         direct: bool,
     ) -> None:
-        if len(parts) == 2:
+        if len(parts) < 2:
+            return
+
+        if parts[0] == 'the':
+            # handling a keyword
+            src = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
+            path = TownPathfinder.path_to(src, parts[1])
+            self.bot.goto(path)
+        elif len(parts) == 2:
+            # a direct point
             try:
                 x = int(parts[0])
                 y = int(parts[1])
-                self.bot.goto(x, y)
+                self.bot.goto([(x, y)])
             except ValueError as e:
                 self.bot.say("I can't go there", channel)
                 return
+        else:
+            logging.warning(f'invalid goto command: {parts}')
 
     def command_logout(
         self,

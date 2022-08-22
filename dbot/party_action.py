@@ -15,6 +15,7 @@ from dbot.action import Action
 from dbot.party import Party
 from dbot.uistate import UIScreen
 from dbot.common import UIPositions
+from dbot.pathfinding import TownPathfinder
 
 
 # TODO: move Party.target in PartyAction
@@ -151,19 +152,30 @@ class PartyAction(Action):
 
     def do_none(self) -> None:
         if self.bot.party.target_leader_is_me:
+            src = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
+            path = TownPathfinder.path_to(src, 'road')
+            self.bot.goto(path)
             self.set_state(PartyActionState.waiting)
         else:
             self.set_state(PartyActionState.moving)
             leader = self.bot.state.get_player(self.bot.party.target_leader)
             assert leader is not None
-            target_x = int(leader['coords']['x'])
-            target_y = int(leader['coords']['y'])
+
+            leader_src = (leader['coords']['x'], leader['coords']['y'])
+            leader_path = TownPathfinder.path_to(leader_src, 'road')
+            target_x, target_y = leader_path[-1]
+
             pos = self.bot.party.target_position
             if pos == 1:
                 target_x -= 1
             else:
                 target_x += 1
-            self.bot.goto(target_x, target_y)
+
+            # path to road first, just in case
+            src = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
+            path = TownPathfinder.path_to(src, 'road')
+            path.append((target_x, target_y))
+            self.bot.goto(path)
 
     def do_complete(self) -> None:
         pass
