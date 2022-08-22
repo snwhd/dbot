@@ -252,6 +252,9 @@ class GlobalNamespace(socketio.ClientNamespace):
         es = list(map(BattleEvent.decode_from, assert_type(data, list)))
         return events.BattleEvents(es)
 
+    def on_playOutBattleRound(self, data):
+        return events.PlayOutBattleRound(assert_type(data, int))
+
     #
     # trades
     #
@@ -381,6 +384,13 @@ class RetroSocket:
         """ send a keydown (pressed) message """
         self.socket.emit('keydown', key)
         logging.debug(f'keydown: {key}')
+
+    def send_keypress(
+        self,
+        key: str,
+    ) -> None:
+        self.send_keydown(key)
+        self.send_keyup(key)
 
     def send_logout(self) -> None:
         """ logout from retrommo """

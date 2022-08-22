@@ -256,6 +256,16 @@ class BattleEvents(GameEvent):
         self.events = events
 
 
+class PlayOutBattleRound(GameEvent):
+
+    def __init__(
+        self,
+        duration: int,
+    ) -> None:
+        super().__init__('playOutBattleRound')
+        self.duration = duration
+
+
 #
 # trades
 #

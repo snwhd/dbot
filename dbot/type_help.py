@@ -39,6 +39,19 @@ def expect_int(
     raise ValueError(f'unsupported data type: {type(d)}')
 
 
+def expect_float(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+) -> float:
+    if isinstance(d, dict):
+        assert isinstance(k, str)
+        return assert_type(d[k], float)
+    elif isinstance(d, list) or isinstance(d, tuple):
+        assert isinstance(k, int)
+        return assert_type(d[k], float)
+    raise ValueError(f'unsupported data type: {type(d)}')
+
+
 def expect_str(
     d: Union[Collection[Any], Dict[str, Any]],
     k: Union[int, str],

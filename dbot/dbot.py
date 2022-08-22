@@ -24,6 +24,12 @@ from dbot.common import (
 from dbot.chat_commands import (
     CommandHandler,
 )
+from dbot.battle_controller import (
+    BattleController,
+    SimpleClericController,
+    SimpleWarriorController,
+    SimpleWizardController,
+)
 from dbot.pathfinding import (
     Point,
     TownPathfinder,
@@ -70,6 +76,7 @@ class DBot:
         self.max_errors = 0
 
         # game state
+        self.battle_controller: BattleController = SimpleClericController(self)
         self.battle: Optional[Battle] = None
         self.party = Party(self, [self.name])
         self.state = GameState()
@@ -393,12 +400,14 @@ class DBot:
         e: events.StartBattle,
     ) -> None:
         self.battle = Battle()
+        self.battle_controller.start()
 
     def handle_leaveBattle(
         self,
         e: events.LeaveBattle,
     ) -> None:
         # TODO: should this save in last_battle?
+        self.battle_controller.leave()
         self.battle = None
 
     def handle_update(
@@ -455,13 +464,19 @@ class DBot:
             self.handle_event(event)
         if do_actions:
             self.movement()
-            self.action()
+            if self.battle is not None:
+                self.battle_step()
+            else:
+                self.action()
 
     def handle_event(
         self,
         event: events.GameEvent,
     ) -> None:
         self.ui.check_event(event)
+        if self.battle is not None:
+            self.battle_controller.check_event(event)
+
         handler = getattr(self, f'handle_{event.event_name}', None)
         if handler is not None:
             handler(event)
@@ -509,6 +524,9 @@ class DBot:
     def action(self) -> None:
         if self.current_action is not None:
             self.current_action.step()
+
+    def battle_step(self) -> None:
+        self.battle_controller.step()
 
     #
     # helper methods for command implementation
