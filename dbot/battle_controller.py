@@ -52,7 +52,7 @@ class BattleController:
     ) -> bool:
         if isinstance(e, events.PlayOutBattleRound):
             if not self.state == BattleState.targetted:
-                logging.info('round when not targetted? ({self.state.valie})')
+                logging.info(f'round when not targetted? ({self.state.value})')
             seconds = float(e.duration) / 1000.0
             logging.debug(f'next round in {seconds} seconds')
             self.next_round = time.time() + seconds + 0.5
