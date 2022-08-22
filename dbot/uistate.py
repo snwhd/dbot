@@ -40,6 +40,8 @@ class UIScreen(enum.Enum):
     shop_inventory = 'shop inventory'
     not_enough_gold = 'not enough gold'
 
+    battle = 'battle'
+
 
 class UIState:
 
@@ -95,6 +97,11 @@ class UIState:
             UIScreen.inv_inventory,
             UIScreen.inv_equipment,
             UIScreen.inv_cosmetics,
+        }
+
+    def in_battle(self) -> bool:
+        return self.screen in {
+            UIScreen.battle,
         }
 
     def check_event(
@@ -315,8 +322,21 @@ class UIState:
         return False
 
     #
-    # battle - prompt only
+    # battle
     #
+
+    def check_battle(
+        self,
+        e: events.GameEvent,
+    ) -> bool:
+        # TODO: more specific battle screens
+        if isinstance(e, events.StartBattle):
+            self.screen = UIScreen.battle
+            return True
+        elif isinstance(e, events.LeaveBattle):
+            self.screen = UIScreen.battle
+            return True
+        return False
 
     def check_battle_prompt(
         self,

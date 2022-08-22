@@ -63,6 +63,11 @@ class CommandHandler:
             admin_only=False,
         ))
         self.add_command(CommandConfig(
+            'report',
+            self.command_report,
+            admin_only=False,
+        ))
+        self.add_command(CommandConfig(
             'where',
             self.command_where,
             admin_only=False,
@@ -259,3 +264,12 @@ class CommandHandler:
         direct: bool,
     ) -> None:
         self.bot.logout()
+
+    def command_report(
+        self,
+        parts: List[str],
+        source: str,
+        channel: str,
+        direct: bool,
+    ) -> None:
+        self.bot.check_stats_and_report()

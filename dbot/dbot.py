@@ -88,6 +88,8 @@ class DBot:
         self.bonked = [False, False]
         self.move_ready = True
 
+        self.report_state = 'none'
+
     @property
     def socket(self) -> RetroSocket:
         if self._socket is None:
@@ -386,13 +388,39 @@ class DBot:
         else:
             logging.info('bonk when not moving!?')
 
+    def handle_startBattle(
+        self,
+        e: events.StartBattle,
+    ) -> None:
+        self.battle = Battle()
+
+    def handle_leaveBattle(
+        self,
+        e: events.LeaveBattle,
+    ) -> None:
+        # TODO: should this save in last_battle?
+        self.battle = None
+
     def handle_update(
         self,
         e: events.Update,
     ) -> None:
-        # TODO: why isn't this used in UIState?
-        # if e.key == 'partyPromptedPlayerUsername':
-        ...
+        self.state.vars[e.key] = e.value
+        if (
+            e.key == 'statsPrompted' and
+            e.value == True and
+            self.report_state == 'waiting on stats'
+        ):
+            self.report_state = 'waiting on gold'
+            self.socket.send_click(*UIPositions.INVENTORY_BUTTON)
+        elif (
+            e.key == 'inventoryPrompted' and
+            e.value == True and
+            self.report_state == 'waiting on gold'
+        ):
+            self.report_state = 'none'
+            self.socket.send_click(*UIPositions.INVENTORY_BUTTON)
+            self.report()
 
     def handle_message(
         self,
@@ -507,6 +535,26 @@ class DBot:
     def logout(self) -> None:
         self.socket.send_logout()
         self.logging_out = True
+
+    def check_stats_and_report(self) -> None:
+        if self.battle is not None:
+            self.report("in battle, ")
+        elif self.report_state == 'none':
+            logging.debug('waiting on stats to report')
+            self.report_state = 'waiting on stats'
+            self.socket.send_click(*UIPositions.STATS_BUTTON)
+
+    def report(
+        self,
+        prompt = '',
+    ) -> None:
+        gold = sum([
+            int(self.state.vars.get('gold', 0)),
+            int(self.state.vars.get('bankedGold', 0)),
+        ])
+        level = str(self.me.get('level', 0))
+        self.say(f"I'm {prompt}level {level}, {gold} gold")
+        self.report_state = 'none'
 
     def join_party(
         self,

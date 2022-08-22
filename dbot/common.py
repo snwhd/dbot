@@ -45,3 +45,6 @@ class UIPositions:
 
     ACCEPT_INVITE = (123.0, 185.0)
     DECLINE_INVITE = (185.0, 185.0)
+
+    STATS_BUTTON = (235.0, 220.0)
+    INVENTORY_BUTTON = (285.0, 220.0)
