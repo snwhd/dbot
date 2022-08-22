@@ -157,8 +157,8 @@ class GlobalNamespace(socketio.ClientNamespace):
         self.event_queue.put(events.Bonk())
 
     def on_transport(self, data):
-        x = expect_float(data, 'x')
-        y = expect_float(data, 'y')
+        x = expect_int(data, 'x')
+        y = expect_int(data, 'y')
         self.event_queue.put(
             events.Transport(x, y)
         )
@@ -250,10 +250,14 @@ class GlobalNamespace(socketio.ClientNamespace):
     # TODO playerUpdate(selectedTarget)
     def on_battleEvents(self, data):
         es = list(map(BattleEvent.decode_from, assert_type(data, list)))
-        return events.BattleEvents(es)
+        self.event_queue.put(
+            events.BattleEvents(es)
+        )
 
     def on_playOutBattleRound(self, data):
-        return events.PlayOutBattleRound(assert_type(data, int))
+        self.event_queue.put(
+            events.PlayOutBattleRound(assert_type(data, int))
+        )
 
     #
     # trades

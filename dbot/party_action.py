@@ -85,6 +85,7 @@ class PartyAction(Action):
     def do_waiting(self) -> None:
         if self.bot.party.is_complete:
             self.set_state(PartyActionState.complete)
+            self.bot.say('ready!', 'wsay') # TODO persist channel
             return
 
         now = time.time()

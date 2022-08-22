@@ -52,7 +52,7 @@ class BattleController:
     ) -> bool:
         if isinstance(e, events.PlayOutBattleRound):
             if not self.state == BattleState.targetted:
-                logging.info('round when not targetted?')
+                logging.info('round when not targetted? ({self.state.valie})')
             seconds = float(e.duration) / 1000.0
             logging.debug(f'next round in {seconds} seconds')
             self.next_round = time.time() + seconds + 0.5
@@ -77,6 +77,8 @@ class SimpleClericController(BattleController):
         bot: DBot,
     ) -> None:
         super().__init__(bot)
+        self.select_timeout = 2.0
+        self.selected_at = 0.0
 
     def step(self) -> None:
         super().step()
@@ -92,6 +94,13 @@ class SimpleClericController(BattleController):
             logging.debug(f'using {self.next_ability} on {self.next_target}')
             self.bot.socket.send_keypress(str(self.next_ability))
             self.state = BattleState.selected
+            self.selected_at = time.time()
+        elif (
+            self.state == BattleState.selected and
+            time.time() > self.selected_at + self.select_timeout
+        ):
+            logging.info('select didnt work, resetting')
+            self.state = BattleState.ready
 
     def check_event(
         self,
@@ -113,6 +122,8 @@ class SimpleClericController(BattleController):
                 self.next_ability = None
                 self.next_target  = None
                 self.state = BattleState.targetted
+                # just in case something breaks
+                self.next_round = time.time() + 25.0
                 return True
         return False
 

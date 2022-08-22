@@ -576,7 +576,7 @@ class DBot:
             int(self.state.vars.get('bankedGold', 0)),
         ])
         level = str(self.me.get('level', 0))
-        self.say(f"I'm {prompt}level {level}, {gold} gold")
+        self.say(f"I'm {prompt}level {level}, {gold} gold", self.report_channel)
         self.report_state = 'none'
 
     def join_party(
