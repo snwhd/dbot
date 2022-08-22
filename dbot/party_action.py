@@ -1,0 +1,166 @@
+from typing import (
+    Dict,
+)
+import enum
+import logging
+import time
+
+from dbot.party import Party
+from dbot.uistate import UIScreen
+from dbot.common import UIPositions
+
+
+# avoid cyclic import, but keep type checking
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dbot.dbot import DBot
+
+
+# TODO: move Party.target in PartyAction
+
+
+class PartyActionState(enum.Enum):
+
+    # leader
+    waiting = 'waiting'
+    selecting = 'selecting'
+
+    # follower
+    moving = 'moving'
+    awaiting = 'awaiting'
+    accepted = 'accepted'
+
+    # all
+    none = 'none'
+    complete = 'complete'
+
+
+class PartyAction:
+
+    def __init__(
+        self,
+        bot: DBot,
+    ) -> None:
+        self.state = PartyActionState.none
+        self.bot = bot
+
+        self.send_timeout = 2.5
+        self.invites_sent: Dict[str, float] = {}
+        self.selecting_since = 0.0
+
+        self.state_handlers = {
+            PartyActionState.waiting:   self.do_waiting,
+            PartyActionState.selecting: self.do_selecting,
+            PartyActionState.moving:    self.do_moving,
+            PartyActionState.awaiting:  self.do_awaiting,
+            PartyActionState.accepted:  self.do_accepted,
+            PartyActionState.none:      self.do_none,
+            PartyActionState.complete:  self.do_complete,
+        }
+
+    def set_state(
+        self,
+        new_state: PartyActionState,
+    ) -> None:
+        assert self.state != PartyActionState.complete
+        if self.bot.party.target_leader_is_me:
+            assert new_state not in {
+                PartyActionState.moving,
+                PartyActionState.awaiting,
+                PartyActionState.accepted,
+            }, 'leader given follower state'
+        else:
+            assert new_state not in {
+                PartyActionState.waiting,
+                PartyActionState.selecting,
+            }, 'follower given leader state'
+        self.state = new_state
+
+    def step(self) -> None:
+       self. state_handlers[self.state]()
+
+    def do_waiting(self) -> None:
+        if self.bot.party.is_complete:
+            self.set_state(PartyActionState.complete)
+
+        now = time.time()
+        for name in self.bot.party.target:
+            if name != self.bot.name:
+                player = self.bot.state.get_player(name)
+                assert player is not None
+                player_x = int(player['coords']['x'])
+                player_y = int(player['coords']['y'])
+                if (
+                    abs(player_x - self.bot.me['coords']['x']) <= 1 and
+                    abs(player_y - self.bot.me['coords']['y']) <= 1
+                ):
+                    sent_at = self.invites_sent.get(name)
+                    if sent_at is None or (now - sent_at) > self.send_timeout:
+                        logging.debug(f'sending invite to {name}')
+                        self.invites_sent[name] = now
+                        self.bot.click_at_tile(player_x, player_y)
+                        self.set_state(PartyActionState.selecting)
+                        self.selecting_since = now
+                        break
+                else:
+                    logging.debug(f'{name} too far away ({player_x}, {player_y})')
+
+    def do_selecting(self) -> None:
+        now = time.time()
+        if self.bot.ui.screen == UIScreen.player_select:
+            if self.bot.ui.target in self.bot.party.target:
+                self.bot.socket.send_click(*UIPositions.PARTY_INVITE)
+                logging.debug(f'sent invite to {self.bot.ui.target}')
+            else:
+                logging.info(f'clicked wrong player ({self.bot.ui.target})')
+                self.bot.socket.send_click(*UIPositions.PLAYER_SELECT_EXIT)
+            self.set_state(PartyActionState.waiting)
+        elif now - self.selecting_since > 0.5:
+            logging.info('player select didnt pop up')
+            self.set_state(PartyActionState.waiting)
+
+    def do_moving(self) -> None:
+        leader = self.bot.state.get_player(self.bot.party.target_leader)
+        assert leader is not None
+        me = self.bot.me
+        if (
+            self.bot.party.target_position is None and
+            abs(leader['coords']['x'] - me['coords']['x']) <= 1 and
+            abs(leader['coords']['y'] - me['coords']['y']) <= 1
+        ):
+            self.set_state(PartyActionState.awaiting)
+        elif self.bot.party.target_position is None:
+            # TODO: shouldn't hit this, but reset to target pos
+            ...
+
+    def do_awaiting(self) -> None:
+        if self.bot.ui.screen == UIScreen.party_prompt:
+            if self.bot.ui.source == self.bot.party.target_leader:
+                self.bot.socket.send_click(*UIPositions.ACCEPT_INVITE)
+                self.set_state(PartyActionState.accepted)
+            else:
+                self.bot.socket.send_click(*UIPositions.DECLINE_INVITE)
+                self.set_state(PartyActionState.awaiting)
+
+    def do_accepted(self) -> None:
+        if self.bot.party.is_complete:
+            self.set_state(PartyActionState.complete)
+
+    def do_none(self) -> None:
+        if self.bot.party.target_leader_is_me:
+            self.set_state(PartyActionState.waiting)
+        else:
+            self.set_state(PartyActionState.moving)
+            leader = self.bot.state.get_player(self.bot.party.target_leader)
+            assert leader is not None
+            target_x = int(leader['coords']['x'])
+            target_y = int(leader['coords']['y'])
+            pos = self.bot.party.target_position
+            if pos == 1:
+                target_x -= 1
+            else:
+                target_x += 1
+            self.bot.goto(target_x, target_y)
+
+    def do_complete(self) -> None:
+        pass
