@@ -6,15 +6,15 @@ import enum
 import logging
 import time
 
-from dbot.party import Party
-from dbot.uistate import UIScreen
-from dbot.common import UIPositions
-
-
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dbot.dbot import DBot
+
+from dbot.action import Action
+from dbot.party import Party
+from dbot.uistate import UIScreen
+from dbot.common import UIPositions
 
 
 # TODO: move Party.target in PartyAction
@@ -36,14 +36,14 @@ class PartyActionState(enum.Enum):
     complete = 'complete'
 
 
-class PartyAction:
+class PartyAction(Action):
 
     def __init__(
         self,
         bot: DBot,
     ) -> None:
+        super().__init__(bot)
         self.state = PartyActionState.none
-        self.bot = bot
 
         self.send_timeout = 2.5
         self.invites_sent: Dict[str, float] = {}

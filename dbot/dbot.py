@@ -16,11 +16,6 @@ import traceback
 
 import dbot.events as events
 
-from dbot.action import (
-    BotAction,
-    ActionState,
-    GrindTarget,
-)
 from dbot.common import (
     Direction,
     PlayerData,
@@ -30,6 +25,8 @@ from dbot.chat_commands import (
     CommandHandler,
 )
 
+from dbot.action import Action
+from dbot.battle import Battle
 from dbot.party import Party
 from dbot.party_action import PartyAction
 from dbot.retrosocket import RetroSocket
@@ -56,7 +53,8 @@ class DBot:
         # commands + actions
         self.command_handler = CommandHandler(self, 'dbots')
         self.command_handler.add_default_commands()
-        self.current_action: Optional[PartyAction] = None
+        # TODO: queue of actions
+        self.current_action: Optional[Action] = None
 
         # network / socket
         self._socket: Optional[RetroSocket] = None
@@ -64,6 +62,7 @@ class DBot:
         self.max_errors = 0
 
         # game state
+        self.battle: Optional[Battle] = None
         self.party = Party(self, [self.name])
         self.state = GameState()
         self.ui = UIState()
