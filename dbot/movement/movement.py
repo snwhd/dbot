@@ -65,7 +65,10 @@ class MovementController:
     ) -> None:
         key = self.direction_keys[direction]
         if moving and not self.state[direction]:
-            assert not any(self.state.values()), self.state
+            if any(self.state.values()):
+                logging.error(f'({direction.value}) - already moving!')
+                logging.error(f'movement state: {self.state}')
+                self.stop_moving()
             self.bot.socket.send_keydown(key)
             self.state[direction] = True
         if not moving and self.state[direction]:
