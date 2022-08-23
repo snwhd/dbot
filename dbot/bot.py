@@ -27,6 +27,7 @@ from dbot.battle.battle_controller import (
 )
 
 from dbot.actions.action import Action
+from dbot.actions.map_action import MapAction
 from dbot.actions.party_action import PartyAction
 from dbot.actions.grind_action import (
     GrindAction,
@@ -261,6 +262,7 @@ class BasicBot(BotCore):
         if self.current_action is not None:
             complete = self.current_action.step()
             if complete:
+                self.current_action.cleanup()
                 self.action_queue.pop(0)
 
     #
@@ -280,6 +282,8 @@ class BasicBot(BotCore):
         self.action_queue.append(action)
 
     def clear_actions(self) -> None:
+        if self.current_action is not None:
+            self.current_action.cleanup()
         self.action_queue = []
 
     #
@@ -488,6 +492,7 @@ class BasicBot(BotCore):
         self.mover.goto(path)
 
     def logout(self) -> None:
+        self.clear_actions()
         self.socket.send_logout()
         self.logging_out = True
 
@@ -526,6 +531,9 @@ class BasicBot(BotCore):
         target: GrindTarget,
     ) -> None:
         self.enqueue_action(GrindAction(self, target))
+
+    def start_mapping(self) -> None:
+        self.enqueue_action(MapAction(self))
 
     def stop(self) -> None:
         self.mover.clear_goto()

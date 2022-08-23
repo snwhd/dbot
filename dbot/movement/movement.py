@@ -54,6 +54,10 @@ class MovementController:
     def bonked_out(self) -> bool:
         return all(self.bonked)
 
+    @property
+    def still(self) -> bool:
+        return self.target is None and len(self.queue) == 0
+
     #
     # movement basics
     #

@@ -101,6 +101,10 @@ class CommandHandler:
             'assemble',
             self.command_assemble,
         ))
+        self.add_command(CommandConfig(
+            'map',
+            self.command_map,
+        ))
 
     def add_command(
         self,
@@ -323,3 +327,12 @@ class CommandHandler:
                 (tx + dx, ty + dy + 1), # down first, we so face up
                 (tx + dx, ty + dy),
             ])
+
+    def command_map(
+        self,
+        parts: List[str],
+        source: str,
+        channel: str,
+        direct: bool,
+    ) -> None:
+        self.bot.start_mapping()

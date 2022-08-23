@@ -12,9 +12,6 @@ if TYPE_CHECKING:
     from dbot.bot import BasicBot
 
 from dbot.actions.action import Action
-from dbot.state.uistate import UIScreen
-
-from dbot.common.common import UIPositions
 from dbot.movement.pathfinding import (
     OverworldPathfinder,
     TownPathfinder,

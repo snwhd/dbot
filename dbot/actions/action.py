@@ -16,3 +16,6 @@ class Action:
 
     def step(self) -> bool:
         raise NotImplementedError('Action.step should be overridden')
+
+    def cleanup(self) -> None:
+        ...
