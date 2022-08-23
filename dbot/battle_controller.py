@@ -9,7 +9,7 @@ import time
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dbot.dbot import DBot
+    from dbot.bot import BotCore
 
 import dbot.events as events
 
@@ -28,7 +28,7 @@ class BattleController:
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BotCore,
     ) -> None:
         self.bot = bot
         self.next_round = 0.0
@@ -45,6 +45,10 @@ class BattleController:
             if time.time() > self.next_round:
                 logging.debug('next round ready')
                 self.state = BattleState.ready
+
+    #
+    # event handling
+    #
 
     def check_event(
         self,
@@ -74,7 +78,7 @@ class SimpleClericController(BattleController):
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BotCore,
     ) -> None:
         super().__init__(bot)
         self.select_timeout = 2.0
@@ -132,7 +136,7 @@ class SimpleWarriorController(BattleController):
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BotCore,
     ) -> None:
         super().__init__(bot)
 
@@ -151,7 +155,7 @@ class SimpleWizardController(BattleController):
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BotCore,
     ) -> None:
         super().__init__(bot)
 

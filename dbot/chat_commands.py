@@ -12,10 +12,12 @@ import pprint
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dbot.dbot import DBot
+    from dbot.bot import BasicBot
 
 import dbot.events as events
 from dbot.pathfinding import TownPathfinder
+
+from dbot.grind_action import GrindTarget
 
 
 HELLO_MESSAGES = [
@@ -47,7 +49,7 @@ class CommandHandler:
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BasicBot,
         prompt: str,
         allow_direct=True,
     ) -> None:
@@ -71,6 +73,10 @@ class CommandHandler:
             'where',
             self.command_where,
             admin_only=False,
+        ))
+        self.add_command(CommandConfig(
+            'stop',
+            self.command_stop,
         ))
         self.add_command(CommandConfig(
             'debug',
@@ -144,7 +150,7 @@ class CommandHandler:
 
         if config.admin_only and not self.is_admin(e.username):
             logging.info('ignoring "{command}" from non-admin')
-            if self.bot.is_leader():
+            if self.bot.is_bot_leader:
                 self.bot.socket.send_message(
                     e.channel,
                     f'sorry {e.username}, we only obey d.',
@@ -179,9 +185,18 @@ class CommandHandler:
     ) -> None:
         if parts == ['are', 'you']:
             gmap = self.bot.state.map()
-            pos = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
+            pos = self.bot.position
             message = f"I'm at {gmap} {pos}"
             self.bot.say(message, channel)
+
+    def command_stop(
+        self,
+        parts: List[str],
+        source: str,
+        channel: str,
+        direct: bool,
+    ) -> None:
+        self.bot.stop()
 
     def command_debug(
         self,
@@ -202,7 +217,8 @@ class CommandHandler:
         channel: str,
         direct: bool,
     ) -> None:
-        self.bot.grind()
+        # TODO: other targets
+        self.bot.grind(GrindTarget.field_west)
 
     def command_party(
         self,
@@ -241,7 +257,7 @@ class CommandHandler:
 
         if parts[0] == 'the':
             # handling a keyword
-            src = (self.bot.me['coords']['x'], self.bot.me['coords']['y'])
+            src = self.bot.position
             path = TownPathfinder.path_to(src, parts[1])
             self.bot.goto(path)
         elif len(parts) == 2:

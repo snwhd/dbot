@@ -20,77 +20,130 @@ def assert_type(o: Any, t: Type[T]) -> T:
     return o
 
 
-def try_type(o: Any, t: Type[T]) -> Optional[T]:
+def try_type(
+    o: Any,
+    t: Type[T],
+    d: Optional[T] = None,
+) -> Optional[T]:
     if isinstance(o, t):
         return o
-    return None
+    return d
 
 
-def expect_int(
+def expect_type_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    t: Type[T],
+) -> T:
+    if isinstance(d, dict):
+        assert isinstance(k, str)
+        return assert_type(d.get(k), t)
+    elif isinstance(d, list) or isinstance(d, tuple):
+        assert isinstance(k, int)
+        return assert_type(d[k], t)
+    raise ValueError(f'unsupported data type: {type(d)}')
+
+
+def try_type_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    t: Type[T],
+    e: Optional[T],
+) -> Optional[T]:
+    if isinstance(d, dict):
+        assert isinstance(k, str)
+        return try_type(d.get(k, e), t, e)
+    elif isinstance(d, list) or isinstance(d, tuple):
+        assert isinstance(k, int)
+        return try_type(d[k], t, e)
+    raise ValueError(f'unsupported data type: {type(d)}')
+
+
+def expect_int_in(
     d: Union[Collection[Any], Dict[str, Any]],
     k: Union[int, str],
 ) -> int:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], int)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], int)
-    raise ValueError(f'unsupported data type: {type(d)}')
+    return expect_type_in(d, k, int)
 
 
-def expect_float(
+def expect_float_in(
     d: Union[Collection[Any], Dict[str, Any]],
     k: Union[int, str],
 ) -> float:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], float)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], float)
-    raise ValueError(f'unsupported data type: {type(d)}')
+    return expect_type_in(d, k, float)
 
 
-def expect_str(
+def expect_str_in(
     d: Union[Collection[Any], Dict[str, Any]],
     k: Union[int, str],
 ) -> str:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], str)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], str)
-    raise ValueError(f'unsupported data type: {type(d)}')
+    return expect_type_in(d, k, str)
 
 
-def expect_list(
+def expect_list_in(
     d: Union[Collection[Any], Dict[str, Any]],
     k: Union[int, str],
 ) -> list:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], list)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], list)
-    raise ValueError(f'unsupported data type: {type(d)}')
+    return expect_type_in(d, k, list)
 
 
-def expect_bool(
+def expect_dict_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+) -> dict:
+    return expect_type_in(d, k, dict)
+
+
+def expect_bool_in(
     d: Union[Collection[Any], Dict[str, Any]],
     k: Union[int, str],
 ) -> bool:
-    if isinstance(d, dict):
-        assert isinstance(k, str)
-        return assert_type(d[k], bool)
-    elif isinstance(d, list) or isinstance(d, tuple):
-        assert isinstance(k, int)
-        return assert_type(d[k], bool)
-    raise ValueError(f'unsupported data type: {type(d)}')
+    return expect_type_in(d, k, bool)
 
 
-def require_args(d: Union[List, Dict], l: int) -> None:
-    if len(d) < l:
-        raise ValueError('not enough data')
+def try_int_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    e: Optional[int] = None
+) -> Optional[int]:
+    return try_type_in(d, k, int, e)
+
+
+def try_float_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    e: Optional[float] = None,
+) -> Optional[float]:
+    return try_type_in(d, k, float, e)
+
+
+def try_str_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    e: Optional[str] = None,
+) -> Optional[str]:
+    return try_type_in(d, k, str, e)
+
+
+def try_list_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    e: Optional[list] = None,
+) -> Optional[list]:
+    return try_type_in(d, k, list, e)
+
+
+def try_dict_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    e: Optional[dict] = None,
+) -> Optional[dict]:
+    return try_type_in(d, k, dict, e)
+
+
+def try_bool_in(
+    d: Union[Collection[Any], Dict[str, Any]],
+    k: Union[int, str],
+    e: Optional[bool] = None,
+) -> Optional[bool]:
+    return try_type_in(d, k, bool, e)

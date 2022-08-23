@@ -9,7 +9,7 @@ import time
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dbot.dbot import DBot
+    from dbot.bot import BasicBot
 
 from dbot.action import Action
 from dbot.uistate import UIScreen
@@ -50,7 +50,7 @@ class GrindAction(Action):
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BasicBot,
         target: GrindTarget,
     ) -> None:
         super().__init__(bot)
@@ -98,7 +98,7 @@ class GrindAction(Action):
         elif self.bot.party.in_party and not self.bot.party.leader_is_me:
             # can't control the party
             return
-        elif self.bot.target_position is not None:
+        elif self.bot.mover.target is not None:
             # already in motion
             return
 

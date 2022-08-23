@@ -5,8 +5,12 @@ from typing import (
     Set,
 )
 
+import logging
 
-Player = Dict[str, Any]
+from dbot.common import (
+    Player,
+    PlayerData,
+)
 
 
 class GameState:
@@ -19,9 +23,16 @@ class GameState:
         self.last_map : Optional[str] = None
         self.current_map : Optional[str] = None
 
-    def left_map(self) -> None:
-        self.last_map = self.current_map
-        self.current_map = None
+    def left_map(
+        self,
+        username: Optional[str] = None,
+    ) -> None:
+        if username is None:
+            # self left map
+            self.last_map = self.current_map
+            self.current_map = None
+        elif username in self.players_in_map:
+            self.players_in_map.remove(username)
 
     def join_map(
         self,
@@ -39,3 +50,13 @@ class GameState:
     ) -> Optional[Player]:
         return self.players.get(name)
 
+    def add_player(
+        self,
+        player: PlayerData,
+    ) -> None:
+        username = player.username
+        if username in self.players:
+            logging.warning(f'{username} already logged in?')
+        self.players[username] = {
+            'username': username,
+        }

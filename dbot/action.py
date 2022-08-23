@@ -3,14 +3,14 @@ from __future__ import annotations
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dbot.dbot import DBot
+    from dbot.bot import BasicBot
 
 
 class Action:
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BasicBot,
     ) -> None:
         self.bot = bot
 

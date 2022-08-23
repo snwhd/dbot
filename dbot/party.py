@@ -10,14 +10,14 @@ import time
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dbot.dbot import DBot
+    from dbot.bot import BotCore
 
 
 class Party:
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BotCore,
         players: List[str],
     ) -> None:
         assert len(players) <= 3
@@ -65,7 +65,7 @@ class Party:
         self,
         exclude: Optional[List[str]] = None,
     ) -> List[str]:
-        friends = self.bot.logged_in_friends(include_self=True)
+        friends = self.bot.logged_in_bots
         for to_remove in exclude or []:
             if to_remove in friends:
                 friends.remove(to_remove)

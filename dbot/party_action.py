@@ -9,7 +9,7 @@ import time
 # avoid cyclic import, but keep type checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dbot.dbot import DBot
+    from dbot.bot import BasicBot
 
 from dbot.action import Action
 from dbot.party import Party
@@ -41,7 +41,7 @@ class PartyAction(Action):
 
     def __init__(
         self,
-        bot: DBot,
+        bot: BasicBot,
     ) -> None:
         super().__init__(bot)
         self.state = PartyActionState.none
@@ -129,12 +129,12 @@ class PartyAction(Action):
         assert leader is not None
         me = self.bot.me
         if (
-            self.bot.target_position is None and
+            self.bot.mover.target is None and
             abs(leader['coords']['x'] - me['coords']['x']) <= 1 and
             abs(leader['coords']['y'] - me['coords']['y']) <= 1
         ):
             self.set_state(PartyActionState.awaiting)
-        elif self.bot.target_position is None:
+        elif self.bot.mover.target is None:
             # TODO: shouldn't hit this, but reset to target pos
             ...
 

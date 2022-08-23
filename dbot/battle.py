@@ -45,7 +45,7 @@ class BattleEvent:
         cls,
         data: Dict[str, Any],
     ) -> BattleEvent:
-        typ_ = expect_str(data, 'type')
+        typ_ = expect_str_in(data, 'type')
         if typ_ == 'start':
             return cls.decode_start(data)
         if typ_ == 'ability':
@@ -70,7 +70,7 @@ class BattleEvent:
      ) -> BattleEvent:
         return BattleEvent(
             'start',
-            start=expect_int(data, 'start'),
+            start=expect_int_in(data, 'start'),
         )
 
     @classmethod
@@ -82,10 +82,10 @@ class BattleEvent:
             'ability',
             caster=cls.decode_targetable(data['caster']),
             target=cls.decode_targetable(data['target']),
-            ability=expect_str(data, 'ability'),
-            new_mp=expect_int(data, 'newMP'),
-            caster_name=expect_str(data, 'casterName'),
-            target_name=expect_str(data, 'targetName'),
+            ability=expect_str_in(data, 'ability'),
+            new_mp=expect_int_in(data, 'newMP'),
+            caster_name=expect_str_in(data, 'casterName'),
+            target_name=expect_str_in(data, 'targetName'),
         )
 
     @classmethod
@@ -95,10 +95,10 @@ class BattleEvent:
      ) -> BattleEvent:
         return BattleEvent(
             'damage',
-            amount=expect_int(data, 'amount'),
-            guarded=expect_bool(data, 'guarded'),
+            amount=expect_int_in(data, 'amount'),
+            guarded=expect_bool_in(data, 'guarded'),
             recipient=cls.decode_targetable(data['recipient']),
-            recipient_name=expect_str(data, 'recipientName'),
+            recipient_name=expect_str_in(data, 'recipientName'),
         )
 
     @classmethod
@@ -109,7 +109,7 @@ class BattleEvent:
         return BattleEvent(
             'death',
             recipient=cls.decode_targetable(data['recipient']),
-            recipient_name=expect_str(data, 'recipientName'),
+            recipient_name=expect_str_in(data, 'recipientName'),
         )
 
     @classmethod
@@ -119,7 +119,7 @@ class BattleEvent:
      ) -> BattleEvent:
         return BattleEvent(
             'start',
-            escaped=expect_bool(data, 'escaped'),
+            escaped=expect_bool_in(data, 'escaped'),
         )
 
     @classmethod
@@ -129,7 +129,7 @@ class BattleEvent:
      ) -> BattleEvent:
         return BattleEvent(
             'gold',
-            gold=expect_int(data, 'gold'),
+            gold=expect_int_in(data, 'gold'),
         )
 
     @classmethod
@@ -139,7 +139,7 @@ class BattleEvent:
      ) -> BattleEvent:
         return BattleEvent(
             'experience',
-            escaped=expect_int(data, 'experience'),
+            escaped=expect_int_in(data, 'experience'),
         )
 
     @classmethod
@@ -148,9 +148,9 @@ class BattleEvent:
         data: Dict[str, Any],
     ) -> Targetable:
         return Targetable(
-            expect_str(data, 'type'),
-            expect_str(data, 'group'),
-            expect_int(data, 'index'),
+            expect_str_in(data, 'type'),
+            expect_str_in(data, 'group'),
+            expect_int_in(data, 'index'),
         )
 
 

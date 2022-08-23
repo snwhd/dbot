@@ -27,6 +27,11 @@ from dbot.common import (
 from dbot.type_help import *
 
 
+def require_args(d: Union[List, Dict], l: int) -> None:
+    if len(d) < l:
+        raise ValueError('not enough data')
+
+
 class GlobalNamespace(socketio.ClientNamespace):
     """ A ClientNamespace for handling all websocket messages.
 
@@ -76,10 +81,10 @@ class GlobalNamespace(socketio.ClientNamespace):
         data: Dict[str, object],
     ) -> PlayerData:
         months = try_type(data['monthsSubscribed'], int) or 0
-        permissions = expect_int(data, 'permissions')
-        subscriber = expect_bool(data, 'subscriber')
-        username = expect_str(data, 'username')
-        cierra = expect_bool(data, 'cierra')
+        permissions = expect_int_in(data, 'permissions')
+        subscriber = expect_bool_in(data, 'subscriber')
+        username = expect_str_in(data, 'username')
+        cierra = expect_bool_in(data, 'cierra')
         return PlayerData(
             cierra,
             months,
@@ -130,7 +135,7 @@ class GlobalNamespace(socketio.ClientNamespace):
         )
 
     def on_update(self, data):
-        key = expect_str(data, 'key')
+        key = expect_str_in(data, 'key')
         value = data['value']
         self.event_queue.put(
             events.Update(
@@ -144,8 +149,8 @@ class GlobalNamespace(socketio.ClientNamespace):
     #
 
     def on_movePlayer(self, data):
-        direction = Direction(expect_str(data, 'direction'))
-        username = expect_str(data, 'username')
+        direction = Direction(expect_str_in(data, 'direction'))
+        username = expect_str_in(data, 'username')
         self.event_queue.put(
             events.MovePlayer(
                 direction,
@@ -157,8 +162,8 @@ class GlobalNamespace(socketio.ClientNamespace):
         self.event_queue.put(events.Bonk())
 
     def on_transport(self, data):
-        x = expect_int(data, 'x')
-        y = expect_int(data, 'y')
+        x = expect_int_in(data, 'x')
+        y = expect_int_in(data, 'y')
         self.event_queue.put(
             events.Transport(x, y)
         )
@@ -185,8 +190,8 @@ class GlobalNamespace(socketio.ClientNamespace):
     #
 
     def on_playerUpdate(self, data):
-        username = expect_str(data, 'username')
-        key = expect_str(data, 'key')
+        username = expect_str_in(data, 'username')
+        key = expect_str_in(data, 'key')
         value = data['value']
         self.event_queue.put(
             events.PlayerUpdate(
@@ -215,8 +220,8 @@ class GlobalNamespace(socketio.ClientNamespace):
         )
 
     def on_party(self, data):
-        party = expect_list(data, 'party')
-        pid = expect_int(data, 'partyID')
+        party = expect_list_in(data, 'party')
+        pid = expect_int_in(data, 'partyID')
         self.event_queue.put(
             events.Party(
                 party,
@@ -274,14 +279,14 @@ class GlobalNamespace(socketio.ClientNamespace):
 
     def on_message(self, data):
         months = try_type(data['monthsSubscribed'], int) or 0
-        permissions = expect_int(data, 'permissions')
-        subscriber = expect_bool(data, 'subscriber')
-        username = expect_str(data, 'username')
-        contents = expect_str(data, 'contents')
-        warning = expect_bool(data, 'warning')
-        channel = expect_str(data, 'channel')
-        cierra = expect_bool(data, 'cierra')
-        mid = expect_int(data, 'id')
+        permissions = expect_int_in(data, 'permissions')
+        subscriber = expect_bool_in(data, 'subscriber')
+        username = expect_str_in(data, 'username')
+        contents = expect_str_in(data, 'contents')
+        warning = expect_bool_in(data, 'warning')
+        channel = expect_str_in(data, 'channel')
+        cierra = expect_bool_in(data, 'cierra')
+        mid = expect_int_in(data, 'id')
         self.event_queue.put(
             events.Message(
                 channel,
@@ -344,6 +349,13 @@ class RetroSocket:
     #
     # send wrappers
     #
+
+    def emit(
+        self,
+        message: str,
+        data: Any,
+    ) -> None:
+        self.socket.emit(message, data)
 
     def send_message(
         self,

@@ -1,7 +1,12 @@
 from typing import (
+    Any,
+    Dict,
     Optional,
 )
 import enum
+
+
+Player = Dict[str, Any]
 
 
 class Direction(enum.Enum):
