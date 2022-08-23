@@ -73,7 +73,7 @@ class GrindAction(Action):
         new_state: GrindActionState,
     ) -> None:
         assert self.state != GrindActionState.complete, new_state
-        if self.bot.party.target_leader_is_me:
+        if self.bot.party.leader_is_me:
             assert new_state != GrindActionState.waiting
         else:
             assert new_state not in {
@@ -81,7 +81,6 @@ class GrindAction(Action):
                 GrindActionState.returning,
             }, 'follower given leader state'
         self.state = new_state
-        logging.debug(f'new action state: {self.state.value}')
 
     def at_target(self) -> bool:
         if self.target == GrindTarget.field_west:
@@ -90,7 +89,7 @@ class GrindAction(Action):
             raise NotImplementedError('only overworld grind.')
 
     def step(self) -> bool:
-        self. state_handlers[self.state]()
+        self.state_handlers[self.state]()
         return self.state == GrindActionState.complete
 
     def do_walking(self) -> None:
@@ -126,7 +125,7 @@ class GrindAction(Action):
             self.set_state(GrindActionState.battle)
 
     def do_none(self) -> None:
-        if self.bot.party.target_leader_is_me:
+        if self.bot.party.leader_is_me:
             if self.boss_defeated:
                 self.set_state(GrindActionState.returning)
             else:
@@ -140,7 +139,7 @@ class GrindAction(Action):
 
     def do_complete(self) -> None:
         """ boss is complete, walk to tp home """
-        if self.bot.party.target_leader_is_me:
+        if self.bot.party.leader_is_me:
             ...
             # TODO: tell wiz to teleport
             # if self.boss_defeated:

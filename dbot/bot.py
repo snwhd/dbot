@@ -444,7 +444,9 @@ class BasicBot(BotCore):
         self,
         e: events.Party,
     ) -> None:
-        self.party.update_party(e.party)
+        # TODO: do verification based on party id?
+        if self.name in e.party:
+            self.party.update_party(e.party)
 
     #
     # var updates

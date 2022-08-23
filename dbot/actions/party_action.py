@@ -78,7 +78,6 @@ class PartyAction(Action):
                 PartyActionState.selecting,
             }, 'follower given leader state'
         self.state = new_state
-        logging.debug(f'new action state: {self.state.value}')
 
     def step(self) -> bool:
         self.state_handlers[self.state]()

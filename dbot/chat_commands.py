@@ -97,6 +97,10 @@ class CommandHandler:
             'logout',
             self.command_logout,
         ))
+        self.add_command(CommandConfig(
+            'assemble',
+            self.command_assemble,
+        ))
 
     def add_command(
         self,
@@ -288,3 +292,34 @@ class CommandHandler:
         direct: bool,
     ) -> None:
         self.bot.check_stats_and_report(channel)
+
+    def command_assemble(
+        self,
+        parts: List[str],
+        source: str,
+        channel: str,
+        direct: bool,
+    ) -> None:
+        # TODO: assemble from anywhere
+        # TODO: move this to assemble action
+        if len(self.bot.party.players) > 1:
+            logging.warning('cant assemble, in party')
+        elif self.bot.state.map() != 'town':
+            logging.warning('cant assemble, not in town')
+        else:
+            player = self.bot.state.get_player(source)
+            if player is None or source not in self.bot.state.players_in_map:
+                logging.warning('cant assemble, source missing')
+                return
+            tx, ty = int(player['coords']['x']), int(player['coords']['y'])
+            bots = [
+                bot for bot in self.bot.logged_in_bots
+                if bot == self.bot.name or bot in self.bot.state.players_in_map
+            ]
+            my_index = bots.index(self.bot.name)
+            dx = (my_index % 3) - 1
+            dy = 2 + (my_index // 3)
+            self.bot.goto([
+                (tx + dx, ty + dy + 1), # down first, we so face up
+                (tx + dx, ty + dy),
+            ])

@@ -5,6 +5,7 @@ from typing import (
     Optional,
 )
 import time    
+import logging
 
 
 # avoid cyclic import, but keep type checking
@@ -87,6 +88,7 @@ class Party:
         self,
         players: List[str],
     ) -> None:
+        logging.debug(f'new party: {players}')
         self.players = list(players)
 
     def player_left(
