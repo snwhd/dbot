@@ -79,8 +79,9 @@ class PartyAction(Action):
         self.state = new_state
         logging.debug(f'new action state: {self.state.value}')
 
-    def step(self) -> None:
-       self. state_handlers[self.state]()
+    def step(self) -> bool:
+        self.state_handlers[self.state]()
+        return self.state == PartyActionState.complete
 
     def do_waiting(self) -> None:
         if self.bot.party.is_complete:

@@ -14,5 +14,5 @@ class Action:
     ) -> None:
         self.bot = bot
 
-    def step(self) -> None:
+    def step(self) -> bool:
         raise NotImplementedError('Action.step should be overridden')

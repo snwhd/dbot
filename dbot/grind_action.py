@@ -88,8 +88,9 @@ class GrindAction(Action):
         else:
             raise NotImplementedError('only overworld grind.')
 
-    def step(self) -> None:
-       self. state_handlers[self.state]()
+    def step(self) -> bool:
+        self. state_handlers[self.state]()
+        return self.state == GrindActionState.complete
 
     def do_walking(self) -> None:
         if self.bot.battle is not None:

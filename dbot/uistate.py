@@ -104,6 +104,17 @@ class UIState:
             UIScreen.battle,
         }
 
+    def catch_all_handler(
+        self,
+        *args,
+    ) -> None:
+        # TODO: this is a placeholder until all the check_* methods
+        #       are refactored to on_* handlers.
+        if len(args) > 0:
+            event = args[0]
+            if isinstance(event, events.GameEvent):
+                self.check_event(event)
+
     def check_event(
         self,
         e: events.GameEvent,

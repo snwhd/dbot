@@ -216,8 +216,11 @@ class BotCore:
         *args,
     ) -> None:
         handler = getattr(obj, handler_name, None)
+        backup = getattr(obj, 'catch_all_handler', None)
         if handler is not None:
             handler(*args)
+        elif backup is not None:
+            backup(*args)
 
     #
     # logging
@@ -261,7 +264,9 @@ class BasicBot(BotCore):
 
     def step(self) -> None:
         if self.current_action is not None:
-            self.current_action.step()
+            complete = self.current_action.step()
+            if complete:
+                self.action_queue.pop(0)
 
     #
     # commands and actions
@@ -273,7 +278,7 @@ class BasicBot(BotCore):
             return self.action_queue[0]
         return None
 
-    def next_action(
+    def enqueue_action(
         self,
         action: Action,
     ) -> None:
@@ -517,13 +522,13 @@ class BasicBot(BotCore):
         party: List[str],
     ) -> None:
         self.party.set_target(party)
-        self.next_action(PartyAction(self))
+        self.enqueue_action(PartyAction(self))
 
     def grind(
         self,
         target: GrindTarget,
     ) -> None:
-        self.next_action(GrindAction(self, target))
+        self.enqueue_action(GrindAction(self, target))
 
     def stop(self) -> None:
         self.mover.clear_goto()
