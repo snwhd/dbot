@@ -14,10 +14,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dbot.bot import BasicBot
 
-import dbot.events as events
-from dbot.pathfinding import TownPathfinder
-
-from dbot.grind_action import GrindTarget
+import dbot.network.events as events
+from dbot.actions.grind_action import GrindTarget
+from dbot.movement.pathfinding import TownPathfinder
 
 
 HELLO_MESSAGES = [

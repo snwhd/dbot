@@ -11,11 +11,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dbot.bot import BasicBot
 
-from dbot.action import Action
-from dbot.party import Party
-from dbot.uistate import UIScreen
-from dbot.common import UIPositions
-from dbot.pathfinding import TownPathfinder
+from dbot.actions.action import Action
+from dbot.state.uistate import UIScreen
+from dbot.state.party import Party
+
+from dbot.common.common import UIPositions
+from dbot.movement.pathfinding import TownPathfinder
 
 
 # TODO: move Party.target in PartyAction

@@ -11,38 +11,33 @@ import logging
 import time
 import traceback
 
-# network
-import dbot.events as events
-from dbot.retrosocket import RetroSocket
+import dbot.network.events as events
+from dbot.network.retrosocket import RetroSocket
 
-# state
-from dbot.state import GameState
-from dbot.uistate import UIState
+from dbot.state.party import Party
+from dbot.state.state import GameState
+from dbot.state.uistate import UIState
 
-# commands
 from dbot.chat_commands import CommandHandler
 
-# battle
-from dbot.battle import Battle
-from dbot.battle_controller import (
+from dbot.battle.battle import Battle
+from dbot.battle.battle_controller import (
     BattleController,
     SimpleClericController,
 )
 
-# actions
-from dbot.party import Party
-from dbot.action import Action
-from dbot.party_action import PartyAction
-from dbot.grind_action import (
+from dbot.actions.action import Action
+from dbot.actions.party_action import PartyAction
+from dbot.actions.grind_action import (
     GrindAction,
     GrindTarget,
 )
 
-from dbot.type_help import *
 from dbot.config import BotConfig
-from dbot.pathfinding import Point
-from dbot.movement import MovementController
-from dbot.common import (
+from dbot.common.type_help import *
+from dbot.movement.pathfinding import Point
+from dbot.movement.movement import MovementController
+from dbot.common.common import (
     Direction,
     Player,
     UIPositions,

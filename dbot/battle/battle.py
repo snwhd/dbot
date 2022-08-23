@@ -2,7 +2,7 @@ from __future__ import annotations
 import enum
 import logging
 
-from dbot.type_help import *
+from dbot.common.type_help import *
 
 
 class BattleEventType(enum.Enum):

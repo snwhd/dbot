@@ -7,7 +7,7 @@ from typing import (
 
 import logging
 
-from dbot.common import (
+from dbot.common.common import (
     Player,
     PlayerData,
 )

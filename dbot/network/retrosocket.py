@@ -18,13 +18,13 @@ import queue
 import time
 import traceback
 
-from dbot.battle import BattleEvent
-import dbot.events as events
-from dbot.common import (
+from dbot.battle.battle import BattleEvent
+import dbot.network.events as events
+from dbot.common.common import (
     Direction,
     PlayerData,
 )
-from dbot.type_help import *
+from dbot.common.type_help import *
 
 
 def require_args(d: Union[List, Dict], l: int) -> None:

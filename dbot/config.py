@@ -7,7 +7,7 @@ from typing import (
 import json
 import pathlib
 
-from dbot.type_help import *
+from dbot.common.type_help import *
 
 
 class BotConfig:

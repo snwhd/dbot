@@ -6,8 +6,8 @@ from typing import (
 import enum
 import logging
 
-import dbot.events as events
-from dbot.retrosocket import RetroSocket
+import dbot.network.events as events
+from dbot.network.retrosocket import RetroSocket
 
 
 

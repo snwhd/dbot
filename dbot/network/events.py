@@ -4,8 +4,8 @@ from typing import (
     Union,
 )
 
-from dbot.battle import BattleEvent
-from dbot.common import (
+from dbot.battle.battle import BattleEvent
+from dbot.common.common import (
     Direction,
     PlayerData,
 )

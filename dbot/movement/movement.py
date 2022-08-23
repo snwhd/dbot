@@ -14,12 +14,12 @@ if TYPE_CHECKING:
     from dbot.bot import BotCore
 
 # network
-import dbot.events as events
+import dbot.network.events as events
 
-from dbot.common import (
+from dbot.common.common import (
     Direction,
 )
-from dbot.pathfinding import (
+from dbot.movement.pathfinding import (
     Point,
     TownPathfinder,
 )

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dbot.bot import BotCore
 
-import dbot.events as events
+import dbot.network.events as events
 
 
 class BattleState(enum.Enum):
