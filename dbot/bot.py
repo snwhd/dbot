@@ -453,6 +453,16 @@ class BasicBot(BotCore):
             self.party.update_party(e.party)
 
     #
+    # movement passthrough
+    #
+
+    def on_bonk(
+        self,
+        e: events.Bonk,
+    ) -> None:
+        self.mover.on_bonk(e)
+
+    #
     # var updates
     #
 

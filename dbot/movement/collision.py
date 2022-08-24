@@ -48,7 +48,9 @@ class CollisionManager:
         if filepath.exists():
             with filepath.open() as f:
                 cmap = CollisionMap.load(json.loads(f.read()))
+            logging.info(f'loaded {filepath}.')
         else:
+            logging.info(f'{filepath} doesnt exist, new map.')
             cmap = CollisionMap(name)
         self.maps[name] = cmap
         return cmap
@@ -58,6 +60,7 @@ class CollisionManager:
             filepath = self.dir / name
             with filepath.open('w') as f:
                 f.write(json.dumps(cmap.save()))
+            logging.info(f'saved {filepath}')
 
 
 class CollisionMap:

@@ -52,7 +52,16 @@ class MovementController:
 
     @property
     def bonked_out(self) -> bool:
-        return all(self.bonked)
+        if self.target is None:
+            return False # TODO: idk
+
+        tx, ty = self.target
+        cx, cy = self.bot.position
+        return any([
+            all(self.bonked),            # bonk in both directions
+            tx == cx and self.bonked[1], # correct x, bonked y
+            ty == cy and self.bonked[0], # correct y, bonked x
+        ])
 
     @property
     def still(self) -> bool:
@@ -108,7 +117,7 @@ class MovementController:
         self.stop_down()
         self.stop_left()
         self.stop_right()
-        self.bonked = [False, False]
+        # self.bonked = [False, False]
 
     #
     # core loop
@@ -162,6 +171,7 @@ class MovementController:
 
     def clear_goto(self) -> bool:
         self.stop_moving()
+        self.bonked = [False, False]
         if self.target is not None or len(self.queue) > 0:
             self.target = None
             self.queue = []
