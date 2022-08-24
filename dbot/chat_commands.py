@@ -110,6 +110,10 @@ class CommandHandler:
             'bonked',
             self.command_bonked,
         ))
+        self.add_command(CommandConfig(
+            'transported',
+            self.command_transported,
+        ))
 
     def add_command(
         self,
@@ -355,8 +359,26 @@ class CommandHandler:
     ) -> None:
         action = self.bot.current_action
         if action is not None and isinstance(action, MapAction):
-            logging.debug(f'parsing bonk: {parts}')
             if len(parts) == 4:
                 # "bonked at town 10 10"
                 at, place, x, y = parts
                 action.on_other_player_bonked(place, (int(x), int(y)))
+
+    def command_transported(
+        self,
+        parts: List[str],
+        source: str,
+        channel: str,
+        direct: bool,
+    ) -> None:
+        action = self.bot.current_action
+        if action is not None and isinstance(action, MapAction):
+            if len(parts) == 8:
+                # "transported at town 10 10 to overworld 10 10"
+                at, place, x, y, to, place2, x2, y2 = parts
+                action.on_player_transported(
+                    place,
+                    (int(x), int(y)),
+                    place2,
+                    (int(x2), int(y2)),
+                )

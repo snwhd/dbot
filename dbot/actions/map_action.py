@@ -84,6 +84,23 @@ class MapAction(Action):
             logging.debug(f'recording bonk from friend @ {point}')
             self.map.set(*point, True)
 
+    def on_player_transported(
+        self,
+        from_map: str,
+        from_point: Point,
+        to_map: str,
+        to_point: Point,
+    ) -> None:
+        if self.map is not None and self.map.name == from_map:
+            f = f'{from_map}{from_point}'
+            t = f'{to_map}{to_point}'
+            logging.debug(f'recording transport {f} -> {t}')
+            self.map.set_transport(
+                *from_point,
+                to_map,
+                to_point,
+            )
+
     def set_state(
         self,
         new_state: MapActionState,
@@ -126,26 +143,47 @@ class MapAction(Action):
 
     def do_walking(self) -> None:
         if not self.bot.mover.still:
+            # still walking
             return
 
         if self.bot.position == self.current_destination:
             # correct destination
             assert self.map is not None
             self.map.set(*self.bot.position, False)
-        else:
+        elif self.map is not None:
+            # incorrect destination, transported or bonked
             assert self.current_destination is not None
             tx, ty = self.current_destination
             cx, cy = self.bot.position
+
             if abs(tx - cx) + abs(ty - cy) != 1:
-                logging.error(f'mapping, bad destination')
-                logging.error(f'  expected {self.current_destination}')
-                logging.error(f'  got      {self.bot.position}')
-                # TODO: this is probably a transport
+                # moved by more than 1 from expected dest, must be transport
+                # because destination is the only unknown tile, we can trust
+                # that it is the transport tile.
+                expected_map = self.map.name
+                actual_map = self.bot.state.map()
+                assert expected_map != actual_map, 'TODO: transport within map?'
+
+                self.on_player_transported(
+                    expected_map,
+                    (tx, ty),
+                    actual_map,
+                    (cx, cy),
+                )
+                self.bot.say(''.join([
+                    'dbots transported at ',
+                    f'{expected_map} {tx} {ty} to ',
+                    f'{actual_map} {cx} {cy}',
+                ]), 'wsay')
             else:
                 # we correctly bonked
-                assert self.map is not None
                 self.map.set(*self.current_destination, True)
-                self.bot.say(f'dbots bonked at {self.map.name} {tx} {ty}')
+                self.bot.say(
+                    f'dbots bonked at {self.map.name} {tx} {ty}',
+                    'wsay',
+                )
+        else:
+            logging.warning('self.map is None in walking state')
         self.set_state(MapActionState.ready)
 
     def do_correcting(self) -> None:

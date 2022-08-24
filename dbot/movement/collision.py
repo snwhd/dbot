@@ -132,14 +132,13 @@ class CollisionMap:
         destination: Tuple[int, int],
     ) -> None:
         x, y = str(ix), str(iy)
-        point = (ix, iy)
         transport = f'{map_name}{destination}'
         if (
             x in self.transports and
             y in self.transports[x] and 
             self.transports[x][y] != transport
         ):
-            logging.warning(f'conflicting transport at {self.name}{point}')
+            logging.warning(f'conflicting transport at {self.name}{(ix, iy)}')
 
         if x not in self.transports:
             self.transports[x] = {}
