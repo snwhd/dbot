@@ -19,6 +19,8 @@ from dbot.movement.pathfinding import Point
 
 
 T = TypeVar('T', bound='CollisionMap')
+CMap = Dict[str, Dict[str, bool]]
+TransportMap = Dict[str, Dict[str, str]]
 
 
 class CollisionState(enum.Enum):
@@ -48,7 +50,8 @@ class CollisionManager:
         if filepath.exists():
             with filepath.open() as f:
                 cmap = CollisionMap.load(json.loads(f.read()))
-            logging.info(f'loaded {filepath}.')
+            size = len(cmap.map)
+            logging.info(f'loaded {filepath}. {size} Xs.')
         else:
             logging.info(f'{filepath} doesnt exist, new map.')
             cmap = CollisionMap(name)
@@ -59,7 +62,7 @@ class CollisionManager:
         for name, cmap in self.maps.items():
             filepath = self.dir / name
             with filepath.open('w') as f:
-                f.write(json.dumps(cmap.save()))
+                f.write(json.dumps(cmap.save(), indent=2))
             logging.info(f'saved {filepath}')
 
 
@@ -68,8 +71,8 @@ class CollisionMap:
     def __init__(
         self,
         name: str,
-        cmap: Optional[Dict[int, Dict[int, bool]]] = None,
-        transports: Optional[Dict[Tuple[int, int], str]] = None,
+        cmap: Optional[CMap] = None,
+        transports: Optional[TransportMap] = None,
     ) -> None:
         # dicts make resizing easy
         self.transports = transports or {}
@@ -96,23 +99,25 @@ class CollisionMap:
 
     def get(
         self,
-        x: int,
-        y: int,
+        ix: int,
+        iy: int,
     ) -> CollisionState:
+        x, y = str(ix), str(iy)
         if x not in self.map or y not in self.map[x]:
             return CollisionState.unknown
         if self.map[x][y]:
             return CollisionState.bonk
-        if (x, y) in self.transports:
+        if x in self.transports and y in self.transports[x]:
             return CollisionState.transport
         return CollisionState.nobonk
 
     def set(
         self,
-        x: int,
-        y: int,
+        ix: int,
+        iy: int,
         collision: bool,
     ) -> None:
+        x, y = str(ix), str(iy)
         if x not in self.map:
             self.map[x] = {}
         if y in self.map[x] and self.map[x][y] != collision:
@@ -121,16 +126,24 @@ class CollisionMap:
 
     def set_transport(
         self,
-        x: int,
-        y: int,
+        ix: int,
+        iy: int,
         map_name: str,
         destination: Tuple[int, int],
     ) -> None:
-        point = (x, y)
+        x, y = str(ix), str(iy)
+        point = (ix, iy)
         transport = f'{map_name}{destination}'
-        if point in self.transports and self.transports[point] != transport:
+        if (
+            x in self.transports and
+            y in self.transports[x] and 
+            self.transports[x][y] != transport
+        ):
             logging.warning(f'conflicting transport at {self.name}{point}')
-        self.transports[point] = transport
+
+        if x not in self.transports:
+            self.transports[x] = {}
+        self.transports[x][y] = transport
 
     def find_new(
         self,

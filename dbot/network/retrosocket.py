@@ -56,7 +56,7 @@ class GlobalNamespace(socketio.ClientNamespace):
         """ overrididing ClientNamespace """
         handler_name = f'on_{event}'
         if not hasattr(self, handler_name):
-            logging.info(f'not handled: {event} ({args})')
+            # logging.info(f'not handled: {event} ({args})')
             return
 
         handler = getattr(self, handler_name)

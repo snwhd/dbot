@@ -408,6 +408,17 @@ class BasicBot(BotCore):
         if e.direction == Direction.right:
             player['coords']['x'] += 1
 
+        # TODO: make this not bad
+        action = self.current_action
+        if action is not None and isinstance(action, MapAction):
+            action.on_movePlayer(e)
+
+    def on_bonk(
+        self,
+        e: events.Bonk,
+    ) -> None:
+        self.mover.on_bonk(e)
+
     #
     # battle
     #
@@ -453,16 +464,6 @@ class BasicBot(BotCore):
             self.party.update_party(e.party)
 
     #
-    # movement passthrough
-    #
-
-    def on_bonk(
-        self,
-        e: events.Bonk,
-    ) -> None:
-        self.mover.on_bonk(e)
-
-    #
     # var updates
     #
 
@@ -499,7 +500,8 @@ class BasicBot(BotCore):
         self,
         path: List[Point],
     ) -> None:
-        self.mover.goto(path)
+        logging.debug(f'new route: {path}')
+        self.mover.goto(list(path))
 
     def logout(self) -> None:
         self.clear_actions()

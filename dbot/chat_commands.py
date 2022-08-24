@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 import dbot.network.events as events
 from dbot.actions.grind_action import GrindTarget
+from dbot.actions.map_action import MapAction
 from dbot.movement.pathfinding import TownPathfinder
 
 
@@ -105,6 +106,10 @@ class CommandHandler:
             'map',
             self.command_map,
         ))
+        self.add_command(CommandConfig(
+            'bonked',
+            self.command_bonked,
+        ))
 
     def add_command(
         self,
@@ -140,6 +145,10 @@ class CommandHandler:
         except ValueError:
             return
 
+        if e.username == self.bot.name:
+            # ignore own commands
+            return
+
         if len(parts) < 2:
             return
 
@@ -156,7 +165,7 @@ class CommandHandler:
             return
 
         if config.admin_only and not self.is_admin(e.username):
-            logging.info('ignoring "{command}" from non-admin')
+            logging.info(f'ignoring "{command}" from non-admin')
             if self.bot.is_bot_leader:
                 self.bot.socket.send_message(
                     e.channel,
@@ -336,3 +345,18 @@ class CommandHandler:
         direct: bool,
     ) -> None:
         self.bot.start_mapping()
+
+    def command_bonked(
+        self,
+        parts: List[str],
+        source: str,
+        channel: str,
+        direct: bool,
+    ) -> None:
+        action = self.bot.current_action
+        if action is not None and isinstance(action, MapAction):
+            logging.debug(f'parsing bonk: {parts}')
+            if len(parts) == 4:
+                # "bonked at town 10 10"
+                at, place, x, y = parts
+                action.on_other_player_bonked(place, (int(x), int(y)))
