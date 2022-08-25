@@ -391,7 +391,7 @@ class RetroSocket:
     ) -> None:
         """ send keyup (released) message """
         self.socket.emit('keyup', key)
-        logging.debug(f'keyup: {key}')
+        # logging.debug(f'keyup: {key}')
 
     def send_keydown(
         self,
@@ -399,7 +399,7 @@ class RetroSocket:
     ) -> None:
         """ send a keydown (pressed) message """
         self.socket.emit('keydown', key)
-        logging.debug(f'keydown: {key}')
+        # logging.debug(f'keydown: {key}')
 
     def send_keypress(
         self,

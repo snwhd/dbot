@@ -545,7 +545,8 @@ class BasicBot(BotCore):
         self.enqueue_action(GrindAction(self, target))
 
     def start_mapping(self) -> None:
-        self.enqueue_action(MapAction(self))
+        # TODO: diable freq saves
+        self.enqueue_action(MapAction(self, self.name == 'abot'))
 
     def stop(self) -> None:
         self.mover.clear_goto()

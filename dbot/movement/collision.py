@@ -4,6 +4,7 @@ from typing import (
     Dict,
     List,
     Optional,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -11,6 +12,7 @@ from typing import (
 
 import enum
 import json
+import time
 import logging
 import pathlib
 import random
@@ -35,9 +37,12 @@ class CollisionManager:
 
     def __init__(
         self,
-        directory: str,
+        directory: Optional[str],
     ) -> None:
-        self.dir = pathlib.Path(directory)
+        if directory is None:
+            self.dir = None
+        else:
+            self.dir = pathlib.Path(directory)
         self.maps: Dict[str, CollisionMap] = {}
 
     def get(
@@ -46,19 +51,24 @@ class CollisionManager:
     ) -> CollisionMap:
         if name in self.maps:
             return self.maps[name]
-        filepath = self.dir / name
-        if filepath.exists():
-            with filepath.open() as f:
-                cmap = CollisionMap.load(json.loads(f.read()))
-            size = len(cmap.map)
-            logging.info(f'loaded {filepath}. {size} Xs.')
-        else:
+        if self.dir is not None:
+            filepath = self.dir / name
+            if filepath.exists():
+                with filepath.open() as f:
+                    cmap = CollisionMap.load(json.loads(f.read()))
+                size = len(cmap.map)
+                logging.info(f'loaded {filepath}. {size} Xs.')
+                self.maps[name] = cmap
+                return cmap
             logging.info(f'{filepath} doesnt exist, new map.')
-            cmap = CollisionMap(name)
+        cmap = CollisionMap(name)
         self.maps[name] = cmap
         return cmap
 
     def save(self) -> None:
+        if self.dir is None:
+            return
+
         for name, cmap in self.maps.items():
             filepath = self.dir / name
             with filepath.open('w') as f:
@@ -78,6 +88,9 @@ class CollisionMap:
         self.transports = transports or {}
         self.map = cmap or {}
         self.name = name
+
+        self.min: Optional[Tuple[int, int]] = None
+        self.max: Optional[Tuple[int, int]] = None
 
     @classmethod
     def load(
@@ -103,13 +116,16 @@ class CollisionMap:
         iy: int,
     ) -> CollisionState:
         x, y = str(ix), str(iy)
-        if x not in self.map or y not in self.map[x]:
-            return CollisionState.unknown
-        if self.map[x][y]:
-            return CollisionState.bonk
         if x in self.transports and y in self.transports[x]:
+            # it might be a transport (not in map)
             return CollisionState.transport
-        return CollisionState.nobonk
+        if x in self.map and y in self.map[x]:
+            # it's in the map, either collision or no
+            if self.map[x][y]:
+                return CollisionState.bonk
+            return CollisionState.nobonk
+        # otherwise, unexplored
+        return CollisionState.unknown
 
     def set(
         self,
@@ -118,6 +134,9 @@ class CollisionMap:
         collision: bool,
     ) -> None:
         x, y = str(ix), str(iy)
+        if x in self.transports and y in self.transports[x]:
+            logging.warning('overriding transport!?')
+
         if x not in self.map:
             self.map[x] = {}
         if y in self.map[x] and self.map[x][y] != collision:
@@ -132,6 +151,9 @@ class CollisionMap:
         destination: Tuple[int, int],
     ) -> None:
         x, y = str(ix), str(iy)
+        if x in self.map and y in self.map[x]:
+            logging.warning('transport overriding!?')
+
         transport = f'{map_name}{destination}'
         if (
             x in self.transports and
@@ -144,35 +166,6 @@ class CollisionMap:
             self.transports[x] = {}
         self.transports[x][y] = transport
 
-    def find_new(
-        self,
-        src: Point,
-    ) -> Optional[List[Point]]:
-        """ path the nearest unknown """
-        return self.find_internal([src])
-
-    def find_internal(
-        self,
-        path: List[Point],
-    ) -> Optional[List[Point]]:
-        current = path[-1]
-        neighbors = self.neighbors(current)
-        random.shuffle(neighbors)
-        for point, collision in neighbors:
-            if point in path:
-                continue
-            elif collision == CollisionState.unknown:
-                # we hit one!
-                path.append(point)
-                return path
-            elif collision == CollisionState.nobonk:
-                path.append(point)
-                result = self.find_internal(path)
-                if result is not None:
-                    return result
-                path.pop()
-        return None
-
     def neighbors(
         self,
         src: Point,
@@ -180,9 +173,9 @@ class CollisionMap:
         return [
             (p, self.get(*p))
             for p in [
+                (src[0],     src[1] - 1),
+                (src[0],     src[1] + 1),
                 (src[0] - 1, src[1]),
                 (src[0] + 1, src[1]),
-                (src[0], src[1] - 1),
-                (src[0], src[1] + 1),
             ]
         ]
