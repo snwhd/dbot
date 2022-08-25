@@ -27,6 +27,8 @@ from dbot.movement.pathfinding import (
 
 class MovementController:
 
+    near_threshold = 4
+
     direction_keys = {
         Direction.up:    'w',
         Direction.down:  's',
@@ -151,11 +153,15 @@ class MovementController:
         # always move in y direction first, then x
         # unless bonked.
         if cy != ty and not self.bonked[1]:
-            if cy > ty: self.move_up()
-            else: self.move_down()
+            if cy > ty:
+                self.move_up()
+            else:
+                self.move_down()
         elif cx != tx and not self.bonked[0]:
-            if cx > tx: self.move_left()
-            else: self.move_right()
+            if cx > tx:
+                self.move_left()
+            else:
+                self.move_right()
 
         # note: Nothing else is needed because movement doesn't
         #       take effect until we get confirmation from the
@@ -207,8 +213,7 @@ class MovementController:
         else:
             diff = abs(player['coords']['x'] - self.target[0])
 
-        near_threshold = 2
-        if diff < near_threshold:
+        if diff < self.near_threshold:
             self.move(e.direction, False)
 
     def on_bonk(

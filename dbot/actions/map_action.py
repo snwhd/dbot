@@ -147,6 +147,7 @@ class MapAction(Action):
         self,
         path: List[Point],
     ) -> List[Point]:
+        # TODO: this should be part of Pathing
         condensed: List[Point] = []
         if len(path) < 3:
             return path
@@ -185,13 +186,13 @@ class MapAction(Action):
         current_map = self.bot.state.map()
         if self.focus_map is not None and current_map != self.focus_map:
             path = pathing.path_to_map(
-                Location(self.focus_map, self.bot.position),
+                Location(current_map, self.bot.position),
                 self.focus_map,
             )
             if path is not None:
                 # TODO: This will fail if we try to path through
                 #       multiple maps.
-                self.bot.goto(path)
+                self.bot.goto(self.condense(path))
                 self.set_state(MapActionState.correcting)
             else:
                 self.bot.say(f'I\'m stuck in {current_map}', 'wsay')

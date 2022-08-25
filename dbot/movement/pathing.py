@@ -105,6 +105,9 @@ class Pathing:
                 return [(11, 16), (11, 20)]
             elif current_map == 'clothier':
                 return [(11, 16), (11, 20)]
+        elif goal == 'overworld':
+            if current_map == 'town':
+                return self.path(start, Location('town', (39, 6)))
         return None
 
     def path(
