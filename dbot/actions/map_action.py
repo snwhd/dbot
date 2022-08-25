@@ -44,22 +44,14 @@ class MapActionState(enum.Enum):
 
 class MapAction(Action):
 
-    return_to_town = {
-        'overworld': ((19, 29), (19, 32)),
-        'inn':       ((22, 12), (22, 16)),
-        'shop':      ((13, 16), (13, 20)),
-        'armory':    ((16, 16), (16, 20)),
-        'maika':     ((14, 11), (14, 15)),
-        'clothier':  ((11, 16), (11, 20)),
-        'clothier':  ((11, 16), (11, 20)),
-    }
-
     def __init__(
         self,
         bot: BasicBot,
+        focus_map: Optional[str] = None,
         frequent_saves = False,
     ) -> None:
         super().__init__(bot)
+        self.focus_map = focus_map
         self.frequent_saves = frequent_saves
         self.state = MapActionState.none
         self.state_handlers = {
@@ -155,13 +147,6 @@ class MapAction(Action):
         self,
         path: List[Point],
     ) -> List[Point]:
-        # TODO: this is broken e.g. [(39, 10), (39, 9), (39, 8), (39, 7), (40, 7), (41, 7), (41, 6)]
-        #  [(53, 16), (54, 16), (54, 15)] -> [(53, 16), (54, 16), (54, 15)] 
-
-        # [(39, 10), (39, 11), (39, 12), (39, 13), (39, 14), (39, 15), (39, 16), (39, 17), (39, 18), (39, 19), (39, 20), (39, 21), (39, 22), (40, 22), (41, 22), (42, 22), (43, 22), (44, 22), (45, 22), (46, 22), (47, 22), (48, 22), (49, 22), (50, 22), (51, 22), (52, 22), (53, 22), (54, 22), (55, 22), (56, 22), (57, 22), (58, 22), (59, 22), (60, 22), (61, 22), (62, 22), (62, 21), (62, 20)]
-        # -> [(39, 10), (39, 10), (39, 22), (62, 22), (62, 20)]
-
-
         condensed: List[Point] = []
         if len(path) < 3:
             return path
@@ -181,6 +166,7 @@ class MapAction(Action):
             prev = point
 
         if len(condensed) > 1:
+            # TODO: remove this when sure condense isn't borked
             prev = condensed[0]
             for p in condensed[1:]:
                 delta = (p[0] - prev[0], p[1] - prev[1])
@@ -194,26 +180,26 @@ class MapAction(Action):
 
 
     def do_ready(self) -> None:
-        # TODO: this is all hardcoded for town
-
         path = None
+        pathing = Pathing(self.mapper)
         current_map = self.bot.state.map()
-        if current_map != 'town':
-            if current_map in self.return_to_town:
-                logging.warning(f'returning from {current_map}')
-                path = list(self.return_to_town[current_map])
+        if self.focus_map is not None and current_map != self.focus_map:
+            path = pathing.path_to_map(
+                Location(self.focus_map, self.bot.position),
+                self.focus_map,
+            )
+            if path is not None:
+                # TODO: This will fail if we try to path through
+                #       multiple maps.
                 self.bot.goto(path)
                 self.set_state(MapActionState.correcting)
-                return
             else:
-                logging.warning(f'stuck in {current_map}')
+                self.bot.say(f'I\'m stuck in {current_map}', 'wsay')
                 self.set_state(MapActionState.complete)
-                return
-
+            return
 
         # pick a destination
         pick_random = False
-        pathing = Pathing(self.mapper)
         if len(self.queue) < REFRESH_THRESHOLD:
             # refresh the queue
             self.queue = pathing.get_unknowns(Location(
@@ -229,7 +215,7 @@ class MapAction(Action):
 
         if len(self.queue) == 0:
             # still empty? we cleared the map
-            self.bot.say(f'{current_map} map complete.')
+            self.bot.say(f'{current_map} map complete.', 'wsay')
             self.set_state(MapActionState.complete)
             return
 
@@ -254,11 +240,10 @@ class MapAction(Action):
             ))
             if len(self.queue) == 0:
                 # can this edge case actually be hit?
-                self.bot.say(f'{current_map} map complete.')
+                self.bot.say(f'{current_map} map complete.', 'wsay')
                 self.set_state(MapActionState.complete)
                 return
             next_point = nearest()
-            
 
         self.current_destination = Location(
             current_map,
@@ -266,7 +251,7 @@ class MapAction(Action):
         )
 
         path = pathing.path(
-            Location('town', self.bot.position),
+            Location(current_map, self.bot.position),
             self.current_destination,
         )
         if path is not None:
@@ -276,7 +261,7 @@ class MapAction(Action):
         else:
             # we should never hit this, but just ignore
             self.queue.remove(next_point)
-            
+
 
     def do_walking(self) -> None:
         if not self.bot.mover.still:

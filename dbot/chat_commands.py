@@ -348,7 +348,10 @@ class CommandHandler:
         channel: str,
         direct: bool,
     ) -> None:
-        self.bot.start_mapping()
+        if len(parts) > 0:
+            self.bot.start_mapping(focus=parts[0])
+        else:
+            self.bot.start_mapping()
 
     def command_bonked(
         self,

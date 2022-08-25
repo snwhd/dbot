@@ -83,6 +83,30 @@ class Pathing:
 
         return list(unknowns)
 
+    def path_to_map(
+        self,
+        start: Location,
+        goal: str,
+    ) -> Optional[List[Point]]:
+        # TODO: finish this, and do it better
+        current_map = start.map
+        if goal == 'town':
+            if current_map == 'overworld':
+                return [(19, 29), (19, 32)]
+            elif current_map == 'inn':
+                return [(22, 12), (22, 16)]
+            elif current_map == 'shop':
+                return [(13, 16), (13, 20)]
+            elif current_map == 'armory':
+                return [(16, 16), (16, 20)]
+            elif current_map == 'maika':
+                return [(14, 11), (14, 15)]
+            elif current_map == 'clothier':
+                return [(11, 16), (11, 20)]
+            elif current_map == 'clothier':
+                return [(11, 16), (11, 20)]
+        return None
+
     def path(
         self,
         start: Location,
